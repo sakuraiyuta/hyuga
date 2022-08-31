@@ -15,6 +15,14 @@
 
 (setv SCOPE-LISTS #("local" "macro" "global" "builtin"))
 
+(defn not-in-$SYM?
+  [x]
+  (not (in (first x) (.keys ($GLOBAL.get-$SYMS)))))
+
+(defn sym-py/val->sym-hy/val
+  [sym-py/val]
+  (tuple [(-> sym-py/val first sym-py->hy) (second sym-py/val)]))
+
 (defn sym-py->hy
   [sym-py]
   (-> sym-py hy.unmangle))
@@ -90,9 +98,9 @@
         (->> (locals) (.items)
              ;; FIXME: eval-define!: error e=reader macro '#%' is not defined (<string>, line 94)
              ; (map #%(tuple [(-> %1 first sym-py->hy) (second %1)]))
-             (map (fn [x] (tuple [(-> x first sym-py->hy) (second x)])))
+             (map sym-py/val->sym-hy/val)
              ; (filter #%(not (in (first %1) (.keys ($GLOBAL.get-$SYMS)))))
-             (filter (fn [x] (not (in (first x) (.keys ($GLOBAL.get-$SYMS))))))
+             (filter not-in-$SYM?)
              (filter add-sym?)
              (map (fn [x] ($GLOBAL.add-$SYMS (first x)
                                              (second x)
@@ -177,14 +185,15 @@
       (logger.debug (.format "eval done. $GLOBAL.$SYMS.count={}"
                              (->> ($GLOBAL.get-$SYMS) count)))
       (->> __builtins__ (.items)
-           (map #%(tuple [(-> %1 first sym-py->hy) (second %1)]))
+           (map sym-py/val->sym-hy/val)
+           (filter not-in-$SYM?)
            (map #%($GLOBAL.add-$SYMS (first %1)
                                      (second %1)
                                      "builtin"
                                      (create-docs (first %1)
                                                   (second %1))))
            tuple))
-      (logger.debug (.format "builtin loaded."))
+    (logger.debug (.format "builtin loaded."))
     (except
       [e BaseException]
       (logger.warning (.format "eval-define!: error e={}" e)))
