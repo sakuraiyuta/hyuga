@@ -24,11 +24,11 @@
 (defn [($SERVER.feature COMPLETION)] completion
   [params]
   "`textDocument/completion` request handler."
-  (logger.debug (.format "completion params={}" (repr params)))
   (let [word (cursor-word $SERVER
                           params.text_document.uri
                           params.position.line
                           params.position.character)]
+    (logger.debug (.format "completion word={}" (repr word)))
     (if (is-not word None)
       (->> (get-candidates word)
            create-items
@@ -52,7 +52,6 @@
 
 (defn [($SERVER.feature TEXT_DOCUMENT_DID_OPEN)] did-open
   [params]
-  (logger.debug (.format "did-open params={}" (repr params)))
   (eval-define! (-> params.text_document.uri
                     $SERVER.workspace.get_document
                     (. source))))
