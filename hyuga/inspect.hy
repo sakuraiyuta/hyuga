@@ -3,7 +3,6 @@
 (import hyrule.control *)
 (import toolz.itertoolz *)
 (import sys)
-(import re)
 (import pygls.server [LanguageServer])
 (import collections.abc [Iterable])
 (import hyuga.log *)
@@ -12,8 +11,6 @@
 (import hy.models [Lazy Expression])
 
 ;; TODO: clean imports/defines when boot
-
-(setv SCOPE-LISTS #("local" "macro" "global" "builtin"))
 
 (defn not-in-$SYM?
   [x]
@@ -89,9 +86,9 @@
     (sys.meta_path.append DummyImporter)
     (import hyuga-dummy)
     (when (is-eval-target? -hyuga-eval-form)
-      (logger.debug
-        (.format "found def/import: ({} {})"
-                 (first -hyuga-eval-form) (second -hyuga-eval-form)))
+      (logger.debug (.format "found def/import: ({} {})"
+                             (first -hyuga-eval-form)
+                             (second -hyuga-eval-form)))
       (let [evaled (hy.eval -hyuga-eval-form
                             :locals (locals)
                             :module hyuga-dummy)]
@@ -192,8 +189,8 @@
                                      "builtin"
                                      (create-docs (first %1)
                                                   (second %1))))
-           tuple))
-    (logger.debug (.format "builtin loaded."))
+           tuple)
+      (logger.debug (.format "builtin loaded.")))
     (except
       [e BaseException]
       (logger.warning (.format "eval-define!: error e={}" e)))
