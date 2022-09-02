@@ -145,13 +145,6 @@
   (logger.debug (.format "get-details sym-hy={}" sym-hy))
   (-> ($GLOBAL.get-$SYMS) (get sym-hy)))
 
-(defn contains-in-scope?
-  [sym-hy scope]
-  "Echo-back if sym-hy in scope."
-  (->> scope (.keys)
-       (filter (fn [x] (= sym-hy (sym-py->hy x))))
-       tuple))
-
 (defn get-candidates
   [prefix]
   "Get all candidates supposed by prefix from all scopes(globals, locals, builtins, and macros).
