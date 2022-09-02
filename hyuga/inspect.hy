@@ -93,10 +93,7 @@
                             :locals (locals)
                             :module hyuga-dummy)]
         (->> (locals) (.items)
-             ;; FIXME: eval-define!: error e=reader macro '#%' is not defined (<string>, line 94)
-             ; (map #%(tuple [(-> %1 first sym-py->hy) (second %1)]))
              (map sym-py/val->sym-hy/val)
-             ; (filter #%(not (in (first %1) (.keys ($GLOBAL.get-$SYMS)))))
              (filter not-in-$SYM?)
              (filter add-sym?)
              (map (fn [x] ($GLOBAL.add-$SYMS (first x)
@@ -105,24 +102,17 @@
                                              (create-docs (first x)
                                                           (second x)))))
              tuple)
-        ;; TODO: user-defined macros can't read
-        ; (logger.debug (.format "appending macros: __macros__={}" (dir hyuga-dummy.__macros__)))
-        ; (->> __macros__ (.items)
-        ;      (map #%(tuple [(-> %1 first sym-py->hy) (second %1)]))
-        ;      (filter #%(not (in (first %1) (.keys ($GLOBAL.get-$SYMS)))))
-        ;      (filter add-sym?)
-        ;      (map #%($GLOBAL.add-$SYMS (first %1)
-        ;                                (second %1)
-        ;                                "macro"
-        ;                                (create-docs (first %1)
-        ;                                             (second %1))))
-        ;      tuple)
+        (->> hyuga-dummy.__macros__ (.items)
+             (map #%(tuple [(-> %1 first sym-py->hy) (second %1)]))
+             (filter #%(not (in (first %1) (.keys ($GLOBAL.get-$SYMS)))))
+             (filter add-sym?)
+             (map #%($GLOBAL.add-$SYMS (first %1)
+                                       (second %1)
+                                       "macro"
+                                       (create-docs (first %1)
+                                                    (second %1))))
+             tuple)
         -hyuga-eval-form))
-    (except
-      [e StopIteration]
-      ;; FIXME: eval defmacro causes StopIteration
-      (logger.warning (.format "-walk-eval! error e={}" e))
-      (logger.warning (.format "-walk-eval! error e.type={}" (type e))))
     (except
       [e BaseError]
       (logger.error (.format "-walk-eval! error e={}" e))
