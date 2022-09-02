@@ -12,13 +12,31 @@
 
 ;; TODO: clean imports/defines when boot
 
+(defn filter-add-targets
+  [sym-py/vals]
+  "TODO: doc"
+  (->> sym-py/vals
+       (map sym-py/val->sym-hy/val)
+       (filter not-in-$SYM?)
+       (filter add-sym?)))
+
+(defn add-sym!
+  [sym-hy/val scope]
+  "TODO: doc"
+  ($GLOBAL.add-$SYMS (first sym-hy/val)
+                     (second sym-hy/val)
+                     scope
+                     (create-docs (first sym-hy/val)
+                                  (second sym-hy/val))))
+
 (defn not-in-$SYM?
   [x]
   (not (in (first x) (.keys ($GLOBAL.get-$SYMS)))))
 
 (defn sym-py/val->sym-hy/val
   [sym-py/val]
-  (tuple [(-> sym-py/val first sym-py->hy) (second sym-py/val)]))
+  (tuple [(-> sym-py/val first sym-py->hy)
+          (second sym-py/val)]))
 
 (defn sym-py->hy
   [sym-py]
@@ -61,7 +79,9 @@
           "No docs."))
     (except
       [e BaseException]
-      (logger.debug (.format "cannot read __doc__. try macro docs. e={}" e))
+      (logger.debug
+        (.format "cannot read __doc__. try macro docs. e={}"
+                 e))
       (-create-macro-docs sym-hy symtype))))
 
 (defn is-eval-target?
@@ -93,30 +113,19 @@
                             :locals (locals)
                             :module hyuga-dummy)]
         (->> (locals) (.items)
-             (map sym-py/val->sym-hy/val)
-             (filter not-in-$SYM?)
-             (filter add-sym?)
-             (map (fn [x] ($GLOBAL.add-$SYMS (first x)
-                                             (second x)
-                                             "local"
-                                             (create-docs (first x)
-                                                          (second x)))))
+             filter-add-targets
+             (map #%(add-sym! %1 "local"))
              tuple)
         (->> hyuga-dummy.__macros__ (.items)
-             (map #%(tuple [(-> %1 first sym-py->hy) (second %1)]))
-             (filter #%(not (in (first %1) (.keys ($GLOBAL.get-$SYMS)))))
-             (filter add-sym?)
-             (map #%($GLOBAL.add-$SYMS (first %1)
-                                       (second %1)
-                                       "macro"
-                                       (create-docs (first %1)
-                                                    (second %1))))
+             filter-add-targets
+             (map #%(add-sym! %1 "macro"))
              tuple)
         -hyuga-eval-form))
     (except
       [e BaseError]
       (logger.error (.format "-walk-eval! error e={}" e))
-      (logger.error (.format "-walk-eval! error e.type={}" (type e))))
+      (logger.error
+        (.format "-walk-eval! error e.type={}" (type e))))
     (finally
       (sys.meta_path.pop -1)
       (return -hyuga-eval-form))))
@@ -127,7 +136,8 @@
   (try
     (->> forms (prewalk -walk-eval!) tuple)
     (except [e BaseException]
-            (logger.warning (.format "walk-eval! error={}" e)))))
+            (logger.warning
+              (.format "walk-eval! error={}" e)))))
 
 (defn get-details
   [sym-hy]
@@ -137,15 +147,20 @@
 
 (defn get-candidates
   [prefix]
-  "Get all candidates supposed by prefix from all scopes(globals, locals, builtins, and macros).
+  "Get all candidates supposed by prefix from all scopes.
+  (globals, locals, builtins, and macros)
 
   Example:
   ```hy
   (get-candidates \"de\")
-  => #({\"scope\" \"builtin\"  \"type\" <class 'builtin_function_or_method'>  \"sym\" \"delattr\"})
+  => #({\"scope\" \"builtin\"
+        \"type\" <class 'builtin_function_or_method'>
+        \"sym\" \"delattr\"})
   ```
   "
-  (logger.debug (.format "get-candidates: $SYMS.count={}" (count ($GLOBAL.get-$SYMS))))
+  (logger.debug
+    (.format "get-candidates: $SYMS.count={}"
+             (count ($GLOBAL.get-$SYMS))))
   (->> ($GLOBAL.get-$SYMS) (.keys)
        (filter (fn [x] (.startswith x prefix)))
        (map get-details)
