@@ -1,16 +1,20 @@
 (require hyrule * :readers *)
 (import hyrule.collections [prewalk])
+(import hyrule.iterables [butlast drop-last])
 (import hyrule.control *)
+
 (import toolz.itertoolz *)
+
 (import sys)
-(import pygls.server [LanguageServer])
+(import types [ModuleType])
 (import collections.abc [Iterable])
+
+(import pygls.server [LanguageServer])
+
 (import hyuga.log *)
 (import hyuga.global [$GLOBAL])
 (import hyuga.importer [DummyImporter])
 (import hy.models [Lazy Expression])
-
-;; TODO: clean imports/defines when boot
 
 (defn filter-add-targets
   [sym-py/vals]
@@ -145,6 +149,14 @@
   (logger.debug (.format "get-details sym-hy={}" sym-hy))
   (-> ($GLOBAL.get-$SYMS) (get sym-hy)))
 
+(defn get-module-attrs
+  [splitted-by-dot]
+  (let [ns (->> splitted-by-dot butlast (.join "."))
+        eval-str (.format "({}.__dict__.items)" ns)]
+    (-> eval-str hy.read
+        (hy.eval :locals (locals)))))
+
+
 (defn get-candidates
   [prefix]
   "Get all candidates supposed by prefix from all scopes.
@@ -154,17 +166,39 @@
   ```hy
   (get-candidates \"de\")
   => #({\"scope\" \"builtin\"
-        \"type\" <class 'builtin_function_or_method'>
-        \"sym\" \"delattr\"})
+  \"type\" <class 'builtin_function_or_method'>
+  \"sym\" \"delattr\"})
   ```
   "
   (logger.debug
     (.format "get-candidates: $SYMS.count={}"
              (count ($GLOBAL.get-$SYMS))))
-  (->> ($GLOBAL.get-$SYMS) (.keys)
-       (filter (fn [x] (.startswith x prefix)))
-       (map get-details)
-       tuple))
+  (let [splitted-by-dot (.split prefix ".")
+        module-or-class (if (-> splitted-by-dot count (> 1))
+                          (->> splitted-by-dot (drop-last 1) (.join "."))
+                          "")
+        sym-prefix (if module-or-class
+                     (last splitted-by-dot)
+                     prefix)]
+    (logger.debug (.format "module-or-class={}" module-or-class))
+    (when module-or-class
+      (->> (get-module-attrs splitted-by-dot)
+           filter-add-targets
+           (map #%(+ [] [(as-> splitted-by-dot it
+                           (drop-last 1 it)
+                           (list it)
+                           (+ it [(first %1)])
+                           (.join "." it))
+                         (second %1)]))
+           (map #%(add-sym! %1 "module"))
+           tuple))
+    (->> ($GLOBAL.get-$SYMS) .items
+         (filter #%(.startswith (first %1) module-or-class))
+         (filter #%(.startswith (-> %1 first (.split ".") last) sym-prefix))
+         (map #%(get-details (first %1)))
+         (map #%(do (.update %1 {"sym" (-> (get %1 "sym") (.split ".") last)})
+                    %1))
+         tuple)))
 
 (defn eval-define!
   [src]
@@ -180,43 +214,11 @@
       (logger.debug (.format "eval done. $GLOBAL.$SYMS.count={}"
                              (->> ($GLOBAL.get-$SYMS) count)))
       (->> __builtins__ (.items)
-           (map sym-py/val->sym-hy/val)
-           (filter not-in-$SYM?)
-           (map #%($GLOBAL.add-$SYMS (first %1)
-                                     (second %1)
-                                     "builtin"
-                                     (create-docs (first %1)
-                                                  (second %1))))
+           filter-add-targets
+           (map #%(add-sym! %1 "builtin"))
            tuple)
       (logger.debug (.format "builtin loaded.")))
     (except
       [e BaseException]
       (logger.warning (.format "eval-define!: error e={}" e)))
     (else (logger.debug "eval-define! done."))))
-
-;(->>
-;  "
-;  (import re)
-;
-;  (defn testfn
-;  []
-;  (print 1))
-;
-;  (defn testfn2 [] 10)
-;
-;  (defmacro testmacro [form] '())
-;  "
-;  eval-define!
-;  )
-;(get-candidates "te")
-;(->> ($GLOBAL.get-$SYMS) first)
-;(->> (concat #((dir) [])) list )
-;(->> (locals) (.items))
-;(->> (globals) (.items))
-;(get-details "print")
-;(get-details "testfn")
-;(get-details "get-details")
-;(get-details "get-candidates")
-;(get-details "decide-kind")
-;(get-details "defmacro!")
-;(get-details "walk-eval!")
