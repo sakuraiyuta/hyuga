@@ -148,13 +148,26 @@
   ;; TODO: try get info directly if sym not found
   (-> ($GLOBAL.get-$SYMS) (get sym-hy)))
 
+(defn get-module-in-syms
+  [sym-hy]
+  "TODO: doc"
+  (as-> ($GLOBAL.get-$SYMS) it
+    (.items it)
+    (filter #%(= (first %1) sym-hy) it)
+    (first it)
+    (get (second it) "type")))
+
 (defn get-module-attrs
   [splitted-by-dot]
-  (let [ns (->> splitted-by-dot butlast (.join "."))
-        eval-str (.format "({}.__dict__.items)" ns)]
-    (-> eval-str hy.read
-        (hy.eval :locals (locals)))))
-
+  "TODO: doc"
+  (try
+    (let [module (->> splitted-by-dot butlast tuple (.join ".") get-module-in-syms)]
+      (logger.debug (.format "get-module-attrs: module={}"
+                             module))
+      (module.__dict__.items))
+    (except [e BaseException]
+            (logger.warning (.format "get-module-attrs: error e={} e.type={}"
+                                     e (type e))))))
 
 (defn get-candidates
   [prefix]
@@ -182,13 +195,13 @@
     (logger.debug (.format "module-or-class={}" module-or-class))
     (when module-or-class
       (->> (get-module-attrs splitted-by-dot)
-           filter-add-targets
            (map #%(+ [] [(as-> splitted-by-dot it
                            (drop-last 1 it)
                            (list it)
                            (+ it [(first %1)])
                            (.join "." it))
                          (second %1)]))
+           filter-add-targets
            (map #%(add-sym! %1 "module"))
            tuple))
     (->> ($GLOBAL.get-$SYMS) .items
