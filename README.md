@@ -1,7 +1,7 @@
 Hyuga - Yet Another Hy Language Server
 ======================================
 
-[![PyPI version](https://badge.fury.io/py/hyuga.svg)](https://pypi.org/project/hyuga)
+[![PyPI version](https://badge.fury.io/py/hyuga.svg)](https://badge.fury.io/py/hyuga)
 
 Forked from [hy-language-server](https://github.com/rinx/hy-language-server).
 
