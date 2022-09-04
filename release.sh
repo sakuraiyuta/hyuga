@@ -3,6 +3,6 @@
 python3 setup.py sdist
 python3 setup.py bdist_wheel
 twine upload \
-  --repository-url https://pypi.org/legacy/ \
+  --repository-url https://upload.pypi.org/legacy/ \
   dist/*
 
