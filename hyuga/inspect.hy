@@ -108,11 +108,18 @@
   "TODO: doc"
   (try
     (when (is-eval-target? -hyuga-eval-form)
-      (logger.debug (.format "found def/import: ({} {})"
-                             (first -hyuga-eval-form)
-                             (second -hyuga-eval-form)))
-      (let [evaled (hy.eval -hyuga-eval-form
+      (let [raw-import-str (.format "({} {})"
+                                    (first -hyuga-eval-form)
+                                    (second -hyuga-eval-form))
+            evaled (hy.eval -hyuga-eval-form
                             :locals (locals))]
+        (logger.debug (.format "found def/import: {}"
+                               raw-import-str))
+        ;; import raw package(exclude * or [symbol])
+        (when (= (-> -hyuga-eval-form first str) "import")
+          (logger.debug (.format "raw import: {}"
+                                 raw-import-str))
+          (-> raw-import-str hy.read hy.eval))
         ;; TODO: parse defn/defmacro args and add to dict-item
         ;; TODO: can't import module/class in current sourcetree
         (->> (locals) (.items)

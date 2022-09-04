@@ -5,7 +5,7 @@ with open('README.md', 'r') as f:
 
 setup(
     name='hyuga',
-    version='0.0.2',
+    version='0.0.3',
     author='Yuuta Sakurai',
     author_email='sakurai.yuta@gmail.com',
     description='Hyuga - Yet another hy language server',
