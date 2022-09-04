@@ -148,6 +148,7 @@
   [sym-hy]
   "TODO: doc"
   (logger.debug (.format "get-details sym-hy={}" sym-hy))
+  ;; TODO: try get info directly if sym not found
   (-> ($GLOBAL.get-$SYMS) (get sym-hy)))
 
 (defn get-module-attrs
