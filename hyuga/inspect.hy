@@ -116,6 +116,7 @@
       (let [evaled (hy.eval -hyuga-eval-form
                             :locals (locals)
                             :module hyuga-dummy)]
+        ;; TODO: parse defn/defmacro args and add to dict-item
         (->> (locals) (.items)
              filter-add-targets
              (map #%(add-sym! %1 "local"))
