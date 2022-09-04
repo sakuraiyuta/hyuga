@@ -8,7 +8,7 @@ setup(
     version='0.0.1',
     author='Yuuta Sakurai',
     author_email='sakurai.yuta@gmail.com',
-    description='Yet another hy language server',
+    description='Hyuga - Yet another hy language server',
     long_description=long_description,
     long_description_content_type='text/markdown',
     url='https://github.com/sakuraiyuta/hyuga',
