@@ -31,7 +31,8 @@
                      (second sym-hy/val)
                      scope
                      (create-docs (first sym-hy/val)
-                                  (second sym-hy/val))))
+                                  (second sym-hy/val)
+                                  scope)))
 
 (defn not-in-$SYM?
   [x]
@@ -50,7 +51,7 @@
   [sym-hy]
   (-> sym-hy hy.mangle))
 
-(defn -create-macro-docs
+(defn -get-macro-doc
   [sym-hy symtype]
   "Get macro documents.
   FIXME: So dirty hack!"
@@ -66,27 +67,26 @@
        (hy.eval :locals {(sym-hy->py sym-hy) symtype})))
 
 (defn -create-fn-docs
-  [sym-hy symtype orig-docs]
+  [sym-hy symtype scope orig-docs]
   "TODO: doc"
-  (.format "{} {}\n\n{}"
-           sym-hy
-           (str symtype)
-           orig-docs))
+  (.format "{} {}\n\t{}\n\n{}"
+           sym-hy (str symtype) scope orig-docs))
 
 (defn create-docs
-  [sym-hy symtype]
+  [sym-hy symtype scope]
   "TODO: doc"
   (try
     (-create-fn-docs
-      sym-hy symtype
-      (or symtype.__doc__
-          "No docs."))
+      sym-hy symtype scope (or symtype.__doc__ "No docs."))
     (except
       [e BaseException]
       (logger.debug
         (.format "cannot read __doc__. try macro docs. e={}"
                  e))
-      (-create-macro-docs sym-hy symtype))))
+      (-create-fn-docs sym-hy
+                       symtype
+                       scope
+                       (-get-macro-doc sym-hy symtype)))))
 
 (defn is-eval-target?
   [form]
@@ -107,21 +107,19 @@
   [-hyuga-eval-form]
   "TODO: doc"
   (try
-    (sys.meta_path.append DummyImporter)
-    (import hyuga-dummy)
     (when (is-eval-target? -hyuga-eval-form)
       (logger.debug (.format "found def/import: ({} {})"
                              (first -hyuga-eval-form)
                              (second -hyuga-eval-form)))
       (let [evaled (hy.eval -hyuga-eval-form
-                            :locals (locals)
-                            :module hyuga-dummy)]
+                            :locals (locals))]
         ;; TODO: parse defn/defmacro args and add to dict-item
+        ;; TODO: can't import module/class in current sourcetree
         (->> (locals) (.items)
              filter-add-targets
              (map #%(add-sym! %1 "local"))
              tuple)
-        (->> hyuga-dummy.__macros__ (.items)
+        (->> __macros__ (.items)
              filter-add-targets
              (map #%(add-sym! %1 "macro"))
              tuple)
@@ -132,7 +130,6 @@
       (logger.error
         (.format "-walk-eval! error e.type={}" (type e))))
     (finally
-      (sys.meta_path.pop -1)
       (return -hyuga-eval-form))))
 
 (defn walk-eval!
