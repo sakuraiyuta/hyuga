@@ -21,7 +21,7 @@
               "macro" CompletionItemKind.Function
               "module" CompletionItemKind.Module
               "function" CompletionItemKind.Function
-              "type" CompletionItemKind.Class
+              "class" CompletionItemKind.Class
               else CompletionItemKind.Variable)
       int))
 
