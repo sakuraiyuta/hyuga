@@ -15,6 +15,11 @@ This program is **experimental**. Do not use for production.
 - `textDocument/hover`
 - `textDocument/did{Open,Change}`
 
+## Screenshots
+
+![Hyuga sample movie](https://raw.githubusercontent.com/sakuraiyuta/hyuga/images/hyuga-image.gif)
+
+
 ## Install
 
 TODO: implement
