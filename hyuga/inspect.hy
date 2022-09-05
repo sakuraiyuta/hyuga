@@ -99,7 +99,7 @@
 
 (defn add-sym?
   [sym-val]
-  (and (not (.startswith (first sym-val) "_hy-let-evaled-"))
+  (and (not (.startswith (first sym-val) "_hy-"))
        (!= (first sym-val) "-hyuga-eval-form")
        (!= (first sym-val) "hyuga-dummy")))
 
