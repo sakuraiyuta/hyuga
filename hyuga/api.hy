@@ -1,4 +1,10 @@
+(require hyrule * :readers *)
+(import hyrule.iterables [butlast drop-last])
+(import toolz.itertoolz *)
+
 (import hyuga.log [logger])
+(import hyuga.global [$GLOBAL])
+(import hyuga.inspect *)
 
 (defn get-details
   [sym-hy]

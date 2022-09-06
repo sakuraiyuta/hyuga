@@ -15,7 +15,7 @@ setup(
     license="MIT",
     packages=find_packages(exclude=["tests"]),
     package_data={
-        'hyuga': ['*.hy', '__pycache__/*']
+        '': ['*.hy']
     },
     python_requires='>=3.6',
     install_requires=[

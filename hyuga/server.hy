@@ -1,5 +1,4 @@
 (require hyrule * :readers *)
-(import hyrule.collections [prewalk postwalk])
 (import toolz.itertoolz *)
 (import pygls.lsp.methods [COMPLETION
                            HOVER
@@ -14,10 +13,12 @@
                          MarkupContent
                          MarkupKind])
 (import pygls.server [LanguageServer])
-(import hyuga.inspect *)
-(import hyuga.lspspec *)
+
+(import hyuga.api *)
 (import hyuga.cursor *)
-(import hyuga.log *)
+(import hyuga.lspspec *)
+(import hyuga.log [logger])
+(import hyuga.inspect [eval-define!])
 
 (setv $SERVER (LanguageServer))
 
