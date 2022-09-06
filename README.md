@@ -39,6 +39,8 @@ Sample for dein:
 call dein#add('sakuraiyuta/vim-lsp-settings', {'rev': 'add-lang/hyuga'})
 ```
 
+And open `*.hy` file with `filetype=hy`, then run `:LspInstallServer`
+
 ### [Visual Studio Code(VSCode)](https://code.visualstudio.com)
 
 TODO: implement
