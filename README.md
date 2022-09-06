@@ -22,8 +22,38 @@ This program is **experimental**. Do not use for production.
 
 ## Install
 
-TODO: implement
+### plain install
 
-## license
+```bash
+pip3 install hyuga
+```
+
+### [neovim(nvim)](https://github.com/neovim/neovim) + [vim-lsp](https://github.com/prabirshrestha/vim-lsp) + [vim-lsp-settings]()
+
+**Note:** Currently `vim-lsp-settings` doesn't have installer for Hyuga.
+You can test with [my vim-lsp-settings branch](https://github.com/sakuraiyuta/vim-lsp-settings/tree/add-lang/hyuga).
+
+Sample for dein:
+
+```vim
+call dein#add('sakuraiyuta/vim-lsp-settings', {'rev': 'add-lang/hyuga'})
+endif
+```
+
+## Development
+
+### Setup
+
+- Install [poetry](https://github.com/python-poetry/poetry).
+- Clone this project: `git clone https://github.com/sakuraiyuta/hyuga.git`
+- In project directory, execute `poetry install`.
+
+### Test
+
+```bash
+poetry run pytest tests
+```
+
+## License
 
 MIT
