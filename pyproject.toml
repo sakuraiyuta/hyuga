@@ -7,7 +7,7 @@ license = "MIT"
 readme = "README.md"
 
 [tool.poetry.dependencies]
-python = "^3.8"
+python = "^3.7,<3.11"
 hy = "^0.24.0"
 hyrule = "^0.2"
 toolz = "^0.12.0"
