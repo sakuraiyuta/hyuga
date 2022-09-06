@@ -37,8 +37,11 @@ Sample for dein:
 
 ```vim
 call dein#add('sakuraiyuta/vim-lsp-settings', {'rev': 'add-lang/hyuga'})
-endif
 ```
+
+### [Visual Studio Code(VSCode)](https://code.visualstudio.com)
+
+TODO: implement
 
 ## Development
 
