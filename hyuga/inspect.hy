@@ -11,10 +11,11 @@
 
 (import pygls.server [LanguageServer])
 
-(import hyuga.log *)
+(import hyuga.log [logger])
 (import hyuga.global [$GLOBAL])
 (import hyuga.importer [DummyImporter])
 (import hy.models [Lazy Expression])
+(import hyuga.sym.helper *)
 
 (defn filter-add-targets
   [sym-py/vals]
@@ -22,71 +23,7 @@
   (->> sym-py/vals
        (map sym-py/val->sym-hy/val)
        (filter not-in-$SYM?)
-       (filter add-sym?)))
-
-(defn add-sym!
-  [sym-hy/val scope]
-  "TODO: doc"
-  ($GLOBAL.add-$SYMS (first sym-hy/val)
-                     (second sym-hy/val)
-                     scope
-                     (create-docs (first sym-hy/val)
-                                  (second sym-hy/val)
-                                  scope)))
-
-(defn not-in-$SYM?
-  [x]
-  (not (in (first x) (.keys ($GLOBAL.get-$SYMS)))))
-
-(defn sym-py/val->sym-hy/val
-  [sym-py/val]
-  (tuple [(-> sym-py/val first sym-py->hy)
-          (second sym-py/val)]))
-
-(defn sym-py->hy
-  [sym-py]
-  (-> sym-py hy.unmangle))
-
-(defn sym-hy->py
-  [sym-hy]
-  (-> sym-hy hy.mangle))
-
-(defn -get-macro-doc
-  [sym-hy symtype]
-  "Get macro documents.
-  FIXME: So dirty hack!"
-  (->> sym-hy (.format
-                "(do
-                (import io)
-                (import contextlib [redirect-stdout])
-                (with [buf (io.StringIO)
-                _ (redirect-stdout buf)]
-                (doc {})
-                (buf.getvalue)))")
-       hy.read
-       (hy.eval :locals {(sym-hy->py sym-hy) symtype})))
-
-(defn -create-fn-docs
-  [sym-hy symtype scope orig-docs]
-  "TODO: doc"
-  (.format "{} {}\n\t{}\n\n{}"
-           sym-hy (str symtype) scope orig-docs))
-
-(defn create-docs
-  [sym-hy symtype scope]
-  "TODO: doc"
-  (try
-    (-create-fn-docs
-      sym-hy symtype scope (or symtype.__doc__ "No docs."))
-    (except
-      [e BaseException]
-      (logger.debug
-        (.format "cannot read __doc__. try macro docs. e={}"
-                 e))
-      (-create-fn-docs sym-hy
-                       symtype
-                       scope
-                       (-get-macro-doc sym-hy symtype)))))
+       (filter not-exclude-sym?)))
 
 (defn is-eval-target?
   [form]
@@ -96,12 +33,6 @@
            (.startswith (first form) "def")
            (.startswith (first form) "setv")
            (.startswith (first form) "import"))))
-
-(defn add-sym?
-  [sym-val]
-  (and (not (.startswith (first sym-val) "_hy-"))
-       (!= (first sym-val) "-hyuga-eval-form")
-       (!= (first sym-val) "hyuga-dummy")))
 
 (defn -walk-eval!
   [-hyuga-eval-form]
@@ -148,13 +79,6 @@
             (logger.warning
               (.format "walk-eval! error={}" e)))))
 
-(defn get-details
-  [sym-hy]
-  "TODO: doc"
-  (logger.debug (.format "get-details sym-hy={}" sym-hy))
-  ;; TODO: try get info directly if sym not found
-  (-> ($GLOBAL.get-$SYMS) (get sym-hy)))
-
 (defn get-module-in-syms
   [sym-hy]
   "TODO: doc"
@@ -175,49 +99,6 @@
     (except [e BaseException]
             (logger.warning (.format "get-module-attrs: error e={} e.type={}"
                                      e (type e))))))
-
-(defn get-candidates
-  [prefix]
-  "Get all candidates supposed by prefix from all scopes.
-  (globals, locals, builtins, and macros)
-
-  Example:
-  ```hy
-  (get-candidates \"de\")
-  => #({\"scope\" \"builtin\"
-  \"type\" <class 'builtin_function_or_method'>
-  \"sym\" \"delattr\"})
-  ```
-  "
-  (logger.debug
-    (.format "get-candidates: $SYMS.count={}"
-             (count ($GLOBAL.get-$SYMS))))
-  (let [splitted-by-dot (.split prefix ".")
-        module-or-class (if (-> splitted-by-dot count (> 1))
-                          (->> splitted-by-dot (drop-last 1) (.join "."))
-                          "")
-        sym-prefix (if module-or-class
-                     (last splitted-by-dot)
-                     prefix)]
-    (logger.debug (.format "module-or-class={}" module-or-class))
-    (when module-or-class
-      (->> (get-module-attrs splitted-by-dot)
-           (map #%(+ [] [(as-> splitted-by-dot it
-                           (drop-last 1 it)
-                           (list it)
-                           (+ it [(first %1)])
-                           (.join "." it))
-                         (second %1)]))
-           filter-add-targets
-           (map #%(add-sym! %1 "module"))
-           tuple))
-    (->> ($GLOBAL.get-$SYMS) .items
-         (filter #%(.startswith (first %1) module-or-class))
-         (filter #%(.startswith (-> %1 first (.split ".") last) sym-prefix))
-         (map #%(get-details (first %1)))
-         (map #%(do (.update %1 {"sym" (-> (get %1 "sym") (.split ".") last)})
-                    %1))
-         tuple)))
 
 (defn eval-define!
   [src]

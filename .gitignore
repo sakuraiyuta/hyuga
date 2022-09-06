@@ -1,9 +1,8 @@
 /build
 /dist
 /*.log
+__pycache__
 
 /hyuga.egg-info
-/hyuga/__pycache__
-/hyuga/*.py
 !/hyuga/__init__.py
 !/hyuga/__main__.py

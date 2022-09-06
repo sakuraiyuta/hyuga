@@ -2,6 +2,7 @@
 (require hyrule.collections [assoc])
 (import hyuga.log *)
 
+;; TODO: refactor(remove Global)
 (defclass Global [object]
   (defn __init__
     [self]

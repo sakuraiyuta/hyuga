@@ -13,7 +13,7 @@ setup(
     long_description_content_type='text/markdown',
     url='https://github.com/sakuraiyuta/hyuga',
     license="MIT",
-    packages=['hyuga'],
+    packages=find_packages(exclude=["tests"]),
     package_data={
         'hyuga': ['*.hy', '__pycache__/*']
     },
