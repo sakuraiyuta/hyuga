@@ -9,6 +9,7 @@
                          MarkupContent
                          MarkupKind])
 (import hyuga.log *)
+(import hyuga.sym.helper *)
 
 (defn decide-kind
   [anno]
@@ -25,15 +26,28 @@
               else CompletionItemKind.Variable)
       int))
 
+(defn create-item
+  [prefix symdata]
+  "TODO: doc"
+  (logger.debug f"create-item symdata={symdata}")
+  (let [prefix-splitted (.split prefix ".")
+        sym-splitted (-> (:sym symdata) (.split "."))
+        insert-text (if (module-or-class? prefix-splitted)
+                      (-> sym-splitted last)
+                      (:sym symdata))]
+    (logger.debug (.format "insert-text={}" insert-text))
+    (CompletionItem
+      :label (:sym symdata)
+      :insert_text insert-text
+      :detail (:docs symdata)
+      :kind (decide-kind (str (:type symdata))))))
+
 (defn create-items
-  [candidates]
+  [prefix candidates]
   "TODO: doc"
   (logger.debug (.format "candidates={}" (repr candidates)))
   (->> candidates
-       (map #%(CompletionItem :label (:sym %1)
-                              :insert_text (:sym %1)
-                              :detail (:docs %1)
-                              :kind (decide-kind (str (:type %1)))))
+       (map #%(create-item prefix %1))
        list))
 
 (defn create-completion-list

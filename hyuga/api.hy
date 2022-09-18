@@ -5,6 +5,7 @@
 (import hyuga.log [logger])
 (import hyuga.global [$GLOBAL])
 (import hyuga.inspect *)
+(import hyuga.sym.helper *)
 
 (defn get-details
   [sym-hy]
@@ -29,17 +30,15 @@
   (logger.debug
     (.format "get-candidates: $SYMS.count={}"
              (count ($GLOBAL.get-$SYMS))))
-  (let [splitted-by-dot (.split prefix ".")
-        module-or-class (if (-> splitted-by-dot count (> 1))
-                          (->> splitted-by-dot (drop-last 1) (.join "."))
-                          "")
+  (let [splitted (.split prefix ".")
+        module-or-class (module-or-class? splitted)
         sym-prefix (if module-or-class
-                     (last splitted-by-dot)
+                     (last splitted)
                      prefix)]
     (logger.debug (.format "module-or-class={}" module-or-class))
     (when module-or-class
-      (->> (get-module-attrs splitted-by-dot)
-           (map #%(+ [] [(as-> splitted-by-dot it
+      (->> (get-module-attrs splitted)
+           (map #%(+ [] [(as-> splitted it
                            (drop-last 1 it)
                            (list it)
                            (+ it [(first %1)])
@@ -52,6 +51,4 @@
          (filter #%(.startswith (first %1) module-or-class))
          (filter #%(.startswith (-> %1 first (.split ".") last) sym-prefix))
          (map #%(get-details (first %1)))
-         (map #%(do (.update %1 {"sym" (-> (get %1 "sym") (.split ".") last)})
-                    %1))
          tuple)))

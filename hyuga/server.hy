@@ -32,7 +32,7 @@
     (logger.debug (.format "completion word={}" (repr word)))
     (if (is-not word None)
       (->> (get-candidates word)
-           create-items
+           (create-items word)
            create-completion-list)
       (create-completion-list []))))
 

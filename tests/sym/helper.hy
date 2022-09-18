@@ -10,7 +10,8 @@
 (defn [(pytest.mark.parametrize
          #("val" "expected")
          [#("a_b" "a-b")
-          #("a>b" "a>b")])]
+          #("a>b" "a>b")
+          #("a.__doc__" "a.__doc__")])]
   test_sym-py-hy
   [val expected]
   (assert (= (sym-py->hy val) expected)))
@@ -18,7 +19,8 @@
 (defn [(pytest.mark.parametrize
          #("val" "expected")
          [#("a-b" "a_b")
-          #("a>b" "hyx_aXgreaterHthan_signXb")])]
+          #("a>b" "hyx_aXgreaterHthan_signXb")
+          #("a.__doc__" "a.__doc__")])]
   test_sym-hy-py
   [val expected]
   (assert (= (sym-hy->py val) expected)))
@@ -33,8 +35,7 @@
 
 (defn [(pytest.mark.parametrize
          #("val" "expected")
-         [#(["eval" None] False)
-          #(["first" None] False)
+         [#(["first" None] False)
           #(["toolz" None] False)
           #(["!not-in-sym!" None] True)])]
   test_not-in-sym
@@ -68,7 +69,7 @@
              "scope" "global"
              "docs" f"first {first}\n\tglobal\n\n{first.__doc__}"})])]
   test_add-sym
-  [val scope expected]
+  [val scope expected fixture-syms]
   (assert (= (add-sym! val scope) expected)))
 
 ;; TODO: testcase for -get-macro-doc
@@ -106,3 +107,13 @@
   test_create-docs
   [symhy symtype scope expected]
   (assert (= (create-docs symhy symtype scope) expected)))
+
+;(defn [(pytest.mark.parametrize
+;         #("symsplitted" "expected")
+;         [#(#("mesa" "ti") "mesa")
+;          #(#("mesa" "") "mesa")
+;          #(#("mesa") "")
+;          #(#("hyuga" "sym" "helper") "hyuga.sym")])]
+;  test_module-or-class
+;  [symsplitted expected]
+;  (assert (= (module-or-class? symsplitted) expected)))

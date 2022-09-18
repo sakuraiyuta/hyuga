@@ -62,11 +62,8 @@
              (map #%(add-sym! %1 "macro"))
              tuple)
         -hyuga-eval-form))
-    (except
-      [e BaseError]
-      (logger.error (.format "-walk-eval! error e={}" e))
-      (logger.error
-        (.format "-walk-eval! error e.type={}" (type e))))
+    (except [e BaseError]
+            (error-trace logger.warning "-walk-eval!" e))
     (finally
       (return -hyuga-eval-form))))
 
@@ -76,8 +73,7 @@
   (try
     (->> forms (prewalk -walk-eval!) tuple)
     (except [e BaseException]
-            (logger.warning
-              (.format "walk-eval! error={}" e)))))
+            (error-trace logger.warning "walk-eval!" e))))
 
 (defn get-module-in-syms
   [sym-hy]
@@ -93,17 +89,15 @@
   "TODO: doc"
   (try
     (let [module (->> splitted-by-dot butlast tuple (.join ".") get-module-in-syms)]
-      (logger.debug (.format "get-module-attrs: module={}"
-                             module))
+      (logger.debug f"get-module-attrs: module={module}")
       (module.__dict__.items))
     (except [e BaseException]
-            (logger.warning (.format "get-module-attrs: error e={} e.type={}"
-                                     e (type e))))))
+            (error-trace logger.warning "get-module-attrs" e))))
 
 (defn eval-define!
   [src]
   "TODO: doc"
-  (logger.debug (.format "eval-define!"))
+  (logger.debug f"eval-define!")
   ;; FIXME: HyEvalError("module 'hy' has no attribute 'hyx_XampersandXreader'")
   ;; when eval (require hyrule * :readers *).
   ;; @see https://github.com/hylang/hy/issues/2291
@@ -113,12 +107,18 @@
       (->> forms (map walk-eval!) tuple)
       (logger.debug (.format "eval done. $GLOBAL.$SYMS.count={}"
                              (->> ($GLOBAL.get-$SYMS) count)))
+      ;; TODO: toggle enable/disable to list sys.modules
+      (->> (sys.modules.items) tuple
+           filter-add-targets
+           (map #%(add-sym! %1 "sys.modules"))
+           tuple)
+      (logger.debug f"sys.modules loaded.")
       (->> __builtins__ (.items)
            filter-add-targets
            (map #%(add-sym! %1 "builtin"))
            tuple)
-      (logger.debug (.format "builtin loaded.")))
+      (logger.debug f"builtin loaded."))
     (except
       [e BaseException]
-      (logger.warning (.format "eval-define!: error e={}" e)))
+      (error-trace logger.warning "eval-define!" e))
     (else (logger.debug "eval-define! done."))))

@@ -1,4 +1,5 @@
 (require hyrule * :readers *)
+(import hyrule.iterables [drop-last])
 
 (import hyuga.log *)
 (import hyuga.global [$GLOBAL])
@@ -10,12 +11,22 @@
   (and (not (.startswith (first sym-hy/val) "_hy-"))
        (!= (first sym-hy/val) "-hyuga-eval-form")))
 
+(defn judge-scope
+  [val expect-scope]
+  "TODO: doc"
+  (branch (in (str val) it)
+          "builtin" "builtin"
+          else expect-scope))
+
 (defn add-sym!
   [sym-hy/val scope]
   "TODO: doc"
   (let [[sym-hy val] sym-hy/val
         docs (create-docs sym-hy val scope)]
-    ($GLOBAL.add-$SYMS sym-hy val scope docs)))
+    ($GLOBAL.add-$SYMS sym-hy
+                       val
+                       (judge-scope val scope)
+                       docs)))
 
 (defn not-in-$SYM?
   [sym-hy/val]
@@ -28,11 +39,15 @@
 
 (defn sym-py->hy
   [sym-py]
-  (-> sym-py hy.unmangle))
+  (->> (.split sym-py ".")
+       (map hy.unmangle)
+       (.join ".")))
 
 (defn sym-hy->py
   [sym-hy]
-  (-> sym-hy hy.mangle))
+    (->> (.split sym-hy ".")
+         (map hy.mangle)
+         (.join ".")))
 
 (defn -get-macro-doc
   [sym-hy symtype]
@@ -70,3 +85,10 @@
                        symtype
                        scope
                        (-get-macro-doc sym-hy symtype)))))
+
+(defn module-or-class?
+  [sym-splitted]
+  "TODO: doc"
+  (if (-> sym-splitted count (> 1))
+    (->> sym-splitted (drop-last 1) (.join "."))
+    ""))
