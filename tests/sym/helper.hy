@@ -6,6 +6,7 @@
 (import hyuga.global [$GLOBAL])
 (import hyuga.sym.helper *)
 (import fixture [fixture-syms])
+(import misc *)
 
 (defn [(pytest.mark.parametrize
          #("val" "expected")
@@ -61,13 +62,13 @@
             {"sym" "eval"
              "type" eval
              "scope" "local"
-             "docs" f"eval {eval}\n\tlocal\n\n{eval.__doc__}"})
+             "docs" (docs-str eval "local")})
           #(["first" first]
             "global"
             {"sym" "first"
              "type" first
              "scope" "global"
-             "docs" f"first {first}\n\tglobal\n\n{first.__doc__}"})])]
+             "docs" (docs-str first "global")})])]
   test_add-sym
   [val scope expected fixture-syms]
   (assert (= (add-sym! val scope) expected)))
@@ -88,22 +89,11 @@
 ;(-get-macro-doc "defmacro!" defmacro!)
 
 (defn [(pytest.mark.parametrize
-         #("symhy" "symtype" "scope" "origdocs" "expected")
-         [#("create-docs"
-             create-docs
-             "global"
-             "TODO: doc"
-             f"create-docs {create-docs}\n\tglobal\n\nTODO: doc")])]
-  test_create-fn-docs
-  [symhy symtype scope origdocs expected]
-  (assert (= (-create-fn-docs symhy symtype scope origdocs) expected)))
-
-(defn [(pytest.mark.parametrize
          #("symhy" "symtype" "scope" "expected")
          [#("create-docs"
              create-docs
              "global"
-             f"create-docs {create-docs}\n\tglobal\n\nTODO: doc")])]
+             (docs-str create-docs "global"))])]
   test_create-docs
   [symhy symtype scope expected]
   (assert (= (create-docs symhy symtype scope) expected)))

@@ -110,7 +110,7 @@
       ;; TODO: toggle enable/disable to list sys.modules
       (->> (sys.modules.items) tuple
            filter-add-targets
-           (map #%(add-sym! %1 "sys.modules"))
+           (map #%(add-sym! %1 "sys"))
            tuple)
       (logger.debug f"sys.modules loaded.")
       (->> __builtins__ (.items)

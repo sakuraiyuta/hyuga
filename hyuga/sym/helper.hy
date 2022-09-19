@@ -64,27 +64,16 @@
        hy.read
        (hy.eval :locals {(sym-hy->py sym-hy) symtype})))
 
-(defn -create-fn-docs
-  [sym-hy symtype scope orig-docs]
-  "TODO: doc"
-  (.format "{} {}\n\t{}\n\n{}"
-           sym-hy (str symtype) scope orig-docs))
-
 (defn create-docs
   [sym-hy symtype scope]
   "TODO: doc"
   (try
-    (-create-fn-docs
-      sym-hy symtype scope (or symtype.__doc__ "No docs."))
+    (let [docstr (or symtype.__doc__ "No docs.")]
+      f"{sym-hy} [{scope}]\n\t{(str symtype)}\n\n{docstr}")
     (except
       [e BaseException]
-      (logger.debug
-        (.format "cannot read __doc__. try macro docs. e={}"
-                 e))
-      (-create-fn-docs sym-hy
-                       symtype
-                       scope
-                       (-get-macro-doc sym-hy symtype)))))
+      (logger.debug f"cannot read __doc__. try macro docs. e={e}")
+      f"{sym-hy} [{scope}]\n\t{(str symtype)}\n\n{(-get-macro-doc sym-hy symtype)}")))
 
 (defn module-or-class?
   [sym-splitted]

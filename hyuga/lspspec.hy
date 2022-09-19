@@ -37,7 +37,7 @@
                       (:sym symdata))]
     (logger.debug (.format "insert-text={}" insert-text))
     (CompletionItem
-      :label (:sym symdata)
+      :label f"{(:sym symdata)} [{(:scope symdata)}]"
       :insert_text insert-text
       :detail (:docs symdata)
       :kind (decide-kind (str (:type symdata))))))
