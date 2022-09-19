@@ -2,7 +2,7 @@
 (import hyrule.collections [prewalk])
 
 (import hy.reserved)
-(import hy.models [Expression])
+(import hy.models [Expression Keyword])
 
 (import sys)
 
@@ -20,42 +20,43 @@
 
 (defn -is-eval-target?
   [form]
-  (and (isinstance form Expression)
-       ;; TODO: get config from server params
-       (or (.startswith (first form) "require")
-           (.startswith (first form) "def")
-           (.startswith (first form) "setv")
-           (.startswith (first form) "import"))))
+  (branch (isinstance form it)
+          Keyword False
+          Expression
+          (let [form-str (-> form first str)]
+            (or (.startswith form-str "require")
+                (.startswith form-str "def")
+                (.startswith form-str "setv")
+                (.startswith form-str "import")))
+          else False))
 
 (defn -walk-eval!
   [-hyuga-eval-form]
   "TODO: doc"
   (try
     (when (-is-eval-target? -hyuga-eval-form)
-      (let [import-str f"({(first -hyuga-eval-form)} {(second -hyuga-eval-form)})"
-            evaled (hy.eval -hyuga-eval-form :locals (locals))]
-        (logger.debug f"found def/import: {import-str}")
-        (when (= (-> -hyuga-eval-form first str) "import")
-          (hy.eval -hyuga-eval-form))
-        ;; TODO: parse defn/defmacro args and show in docs
-        ;; TODO: can't import module/class in current sourcetree
-        (->> (locals) (.items)
-             filter-add-targets
-             (map #%(add-sym! %1 "local"))
-             tuple)
-        (->> (globals) (.items)
-             filter-add-targets
-             (map #%(add-sym! %1 "globals"))
-             tuple)
-        (->> __macros__ (.items)
-             filter-add-targets
-             (map #%(add-sym! %1 "macro"))
-             tuple)))
+      (logger.debug f"found def/import: ({(first -hyuga-eval-form)} {(second -hyuga-eval-form)})")
+      (hy.eval -hyuga-eval-form :locals (locals))
+      (when (= (-> -hyuga-eval-form first str) "import")
+        (hy.eval -hyuga-eval-form))
+      ;; TODO: parse defn/defmacro args and show in docs
+      ;; TODO: can't import module/class in current sourcetree
+      (->> (locals) (.items)
+           filter-add-targets
+           (map #%(add-sym! %1 "local"))
+           tuple)
+      (->> (globals) (.items)
+           filter-add-targets
+           (map #%(add-sym! %1 "globals"))
+           tuple)
+      (->> __macros__ (.items)
+           filter-add-targets
+           (map #%(add-sym! %1 "macro"))
+           tuple))
     (except [e BaseException]
             (error-trace logger.warning "-walk-eval!" e)
-            -hyuga-eval-form)
-    (finally
-      -hyuga-eval-form)))
+            -hyuga-eval-form))
+  -hyuga-eval-form)
 
 (defn walk-eval!
   [forms]

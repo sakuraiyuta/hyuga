@@ -12,7 +12,7 @@
 (defn parse-src!
   [src]
   "TODO: doc"
-  (logger.debug f"eval-define!")
+  (logger.debug f"parse-src!")
   (for [loader-fn [(partial load-src! src)
                    load-hy-macro!
                    load-hy-special!

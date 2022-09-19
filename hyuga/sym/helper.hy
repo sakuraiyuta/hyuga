@@ -1,5 +1,5 @@
 (require hyrule * :readers *)
-(import hyrule.iterables [drop-last])
+(import hyrule.iterables [butlast drop-last])
 
 (import hyuga.log *)
 (import hyuga.global [$GLOBAL])
@@ -81,3 +81,23 @@
   (if (-> sym-splitted count (> 1))
     (->> sym-splitted (drop-last 1) (.join "."))
     ""))
+
+(defn get-module-in-syms
+  [sym-hy]
+  "TODO: doc"
+  (as-> ($GLOBAL.get-$SYMS) it
+    (.items it)
+    (filter #%(= (first %1) sym-hy) it)
+    (first it)
+    (get (second it) "type")))
+
+(defn get-module-attrs
+  [splitted]
+  "TODO: doc"
+  (try
+    (let [module (->> splitted butlast tuple (.join ".")
+                      get-module-in-syms)]
+      (logger.debug "get-module-attrs: module={module}")
+      (module.__dict__.items))
+    (except [e BaseException]
+            (error-trace logger.warning "get-module-attrs" e))))

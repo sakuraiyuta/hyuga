@@ -28,7 +28,7 @@
                           params.text_document.uri
                           params.position.line
                           params.position.character)]
-    (logger.debug (.format "completion word={}" (repr word)))
+    (logger.debug f"completion word={(repr word)}")
     (if (is-not word None)
       (->> (get-candidates word)
            (create-items word)

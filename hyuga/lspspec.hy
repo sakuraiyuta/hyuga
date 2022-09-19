@@ -27,15 +27,14 @@
       int))
 
 (defn create-item
-  [prefix symdata]
+  [word symdata]
   "TODO: doc"
   (logger.debug f"create-item symdata={symdata}")
-  (let [prefix-splitted (.split prefix ".")
+  (let [prefix-splitted (.split word ".")
         sym-splitted (-> (:sym symdata) (.split "."))
         insert-text (if (module-or-class? prefix-splitted)
                       (-> sym-splitted last)
                       (:sym symdata))]
-    (logger.debug (.format "insert-text={}" insert-text))
     (CompletionItem
       :label f"{(:sym symdata)} [{(:scope symdata)}]"
       :insert_text insert-text
@@ -43,15 +42,16 @@
       :kind (decide-kind (str (:type symdata))))))
 
 (defn create-items
-  [prefix candidates]
+  [word candidates]
   "TODO: doc"
-  (logger.debug (.format "candidates={}" (repr candidates)))
+  (logger.debug f"create-items candidates={(repr candidates)}")
   (->> candidates
-       (map #%(create-item prefix %1))
+       (map #%(create-item word %1))
        list))
 
 (defn create-completion-list
   [items [is-incomplete False]]
   "TODO: doc"
+  (logger.debug f"create-completion-list items={items}")
   (CompletionList :is_incomplete is-incomplete
                   :items items))
