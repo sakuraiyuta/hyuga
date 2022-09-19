@@ -1,8 +1,6 @@
 #!/usr/bin/env bash
 
-python3 setup.py sdist
-python3 setup.py bdist_wheel
-twine upload \
-  --repository-url https://upload.pypi.org/legacy/ \
-  dist/*
-
+poetry build && poetry publish
+curl https://github.com/sakuraiyuta/hyuga/blob/master/README.md | \
+	grep -Eo '<img src="[^"]+"' | grep camo | grep -Eo 'https[^"]+' | \
+	xargs -I {} curl -w "\n" -s -X PURGE {}
