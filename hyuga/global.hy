@@ -6,11 +6,8 @@
 (defclass Global [object]
   (defn __init__
     [self]
-    (setv self.$SYMS {})
-    (setv self.$SCOPES {"global" {}
-                        "local" {}
-                        "builtin" {}
-                        "macro" {}}))
+    (setv self.$SYMS {}))
+
   (defn add-$SYMS
     [self sym v scope docs]
     (logger.debug
@@ -29,14 +26,6 @@
 
   (defn get-$SYMS
     [self]
-    self.$SYMS)
-
-  (defn set-$SCOPES
-    [self v]
-    (setv self.$SCOPES v))
-
-  (defn get-$SCOPES
-    [self]
-    self.$SCOPES))
+    self.$SYMS))
 
 (setv $GLOBAL (Global))

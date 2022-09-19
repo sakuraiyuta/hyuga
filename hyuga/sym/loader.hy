@@ -5,6 +5,8 @@
 (import hy.models [Expression Keyword])
 
 (import sys)
+(import functools [reduce])
+(import toolz.dicttoolz [merge])
 
 (import hyuga.log [logger])
 (import hyuga.sym.helper *)
@@ -30,13 +32,25 @@
                 (.startswith form-str "import")))
           else False))
 
+(defn get-syms-for-local
+  []
+  "TODO: docs"
+  (let [local-syms
+        (->> ($GLOBAL.get-$SYMS) .items
+             (map #%(return
+                      {(first %1)
+                       (-> %1 second (get "type"))})))]
+    (reduce merge local-syms {})))
+
 (defn -walk-eval!
   [-hyuga-eval-form]
   "TODO: doc"
   (try
     (when (-is-eval-target? -hyuga-eval-form)
-      (logger.debug f"found def/import: ({(first -hyuga-eval-form)} {(second -hyuga-eval-form)})")
-      (hy.eval -hyuga-eval-form :locals (locals))
+      (logger.debug
+        f"found def/import: ({(first -hyuga-eval-form)} {(second -hyuga-eval-form)})")
+      ;(hy.eval -hyuga-eval-form :locals (locals))
+      (hy.eval -hyuga-eval-form :locals (get-syms-for-local))
       (when (= (-> -hyuga-eval-form first str) "import")
         (hy.eval -hyuga-eval-form))
       ;; TODO: parse defn/defmacro args and show in docs
