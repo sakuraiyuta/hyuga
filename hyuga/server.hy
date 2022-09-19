@@ -9,6 +9,8 @@
                          CompletionList
                          CompletionOptions
                          CompletionParams
+                         ConfigurationParams
+                         ConfigurationItem
                          Hover
                          MarkupContent
                          MarkupKind])
@@ -52,9 +54,11 @@
 
 (defn [($SERVER.feature TEXT_DOCUMENT_DID_OPEN)] did-open
   [params]
+  (logger.debug f"did-open: workspace={$SERVER.workspace.root_uri}")
   (parse-src! (-> params.text_document.uri
-                    $SERVER.workspace.get_document
-                    (. source))))
+                  $SERVER.workspace.get_document
+                  (. source))
+              $SERVER.workspace.root_uri))
 
 (defn [($SERVER.feature TEXT_DOCUMENT_DID_CLOSE)] did-close
   [params]

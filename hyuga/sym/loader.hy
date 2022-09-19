@@ -5,6 +5,7 @@
 (import hy.models [Expression Keyword])
 
 (import sys)
+(import re)
 (import functools [reduce partial])
 (import toolz.dicttoolz [merge])
 
@@ -43,13 +44,12 @@
     (reduce merge local-syms {})))
 
 (defn -eval-and-add-sym!
-  [-hyuga-eval-form]
+  [-hyuga-eval-form root-uri]
   "TODO: docs"
   (logger.debug f"-eval-and-add-sym!: ({(first -hyuga-eval-form)} {(second -hyuga-eval-form)})")
   (try
-    (hy.eval -hyuga-eval-form :locals (locals))
+    (hy.eval -hyuga-eval-form :locals (globals))
     ;; TODO: parse defn/defmacro args and show in docs
-    ;; TODO: can't import module/class in current sourcetree
     (->> (locals) (.items)
          filter-add-targets
          (map #%(add-sym! %1 "local"))
@@ -66,29 +66,29 @@
             (error-trace logger.warning "-eval-and-add-sym!" e))))
 
 (defn -try-eval!
-  [form]
+  [form root-uri]
   "TODO: doc"
   (when (-is-eval-target? form)
     (try
       (logger.debug
         f"found def/import: ({(first form)} {(second form)})")
-      (-eval-and-add-sym! form)
+      (-eval-and-add-sym! form root-uri)
       (except [e BaseException]
               (error-trace logger.warning "-try-eval" e)))))
 
 (defn -prewalk
-  [form]
+  [form root-uri]
   "TODO: doc"
   (walk -prewalk
-        #%(do (-try-eval! form)
+        #%(do (-try-eval! form root-uri)
               %1)
         #%(return %1)))
 
 (defn walk-eval!
-  [forms]
+  [forms root-uri]
   "TODO: doc"
   (try
-    (-prewalk forms)
+    (-prewalk forms root-uri)
     ;    (->> forms (prewalk #(-walk-eval! %1 False)) tuple)
     (except [e BaseException]
             (error-trace logger.warning "walk-eval!" e))))
@@ -103,15 +103,18 @@
        tuple))
 
 (defn load-src!
-  [src]
+  [src root-uri]
   "TODO: docs"
   ;; FIXME: HyEvalError("module 'hy' has no attribute 'hyx_XampersandXreader'")
   ;; when eval (require hyrule * :readers *).
   ;; @see https://github.com/hylang/hy/issues/2291
   (try
+    (let [fixed-uri (re.sub "^[a-z]+://" "" root-uri)]
+      (hy.eval `(import sys))
+      (hy.eval `(sys.path.append ~fixed-uri)))
     (let [forms (hy.read-many src)]
-      (->> forms (map walk-eval!) tuple)
-      (logger.debug f"eval done. $SYMS.count={(->> ($GLOBAL.get-$SYMS) count)}"))
+      (->> forms (map #%(walk-eval! %1 root-uri)) tuple)
+      (logger.debug f"eval done. $SYMS.count={(->> ($GLOBAL.get-$SYMS) count)} root-uri={root-uri}"))
     (except
       [e BaseException]
       (error-trace logger.warning "load-src!" e))
