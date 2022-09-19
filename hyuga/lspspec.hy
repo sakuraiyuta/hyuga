@@ -12,9 +12,9 @@
 (import hyuga.sym.helper *)
 
 (defn decide-kind
-  [anno]
+  [sym-type]
   "@see: https://docs.microsoft.com/en-us/dotnet/api/microsoft.visualstudio.languageserver.protocol.completionitemkind?view=visualstudiosdk-2022"
-  (-> (branch (in it anno)
+  (-> (branch (in it sym-type)
               "builtin" CompletionItemKind.Function
               ;; FIXME: pygls CompletionItemKind.Macro is not defined yet.
               ; "macro" 118115

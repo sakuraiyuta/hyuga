@@ -1,16 +1,29 @@
 (require hyrule * :readers *)
 (import hyrule.iterables [butlast drop-last])
+
 (import toolz.itertoolz *)
+(import functools [partial])
 
 (import hyuga.log [logger])
 (import hyuga.global [$GLOBAL])
-(import hyuga.inspect *)
+(import hyuga.sym.loader *)
 (import hyuga.sym.helper *)
+
+(defn parse-src!
+  [src]
+  "TODO: doc"
+  (logger.debug f"eval-define!")
+  (for [loader-fn [(partial load-src! src)
+                   load-hy-macro!
+                   load-hy-special!
+                   load-sys!
+                   load-builtin!]]
+    (loader-fn)))
 
 (defn get-details
   [sym-hy]
   "TODO: doc"
-  (logger.debug (.format "get-details sym-hy={}" sym-hy))
+  (logger.debug f"get-details sym-hy={sym-hy}" )
   ;; TODO: try get info directly if sym not found
   (-> ($GLOBAL.get-$SYMS) (get sym-hy)))
 
@@ -27,9 +40,7 @@
   \"sym\" \"delattr\"})
   ```
   "
-  (logger.debug
-    (.format "get-candidates: $SYMS.count={}"
-             (count ($GLOBAL.get-$SYMS))))
+  (logger.debug "get-candidates: $SYMS.count={(count ($GLOBAL.get-$SYMS))}")
   (let [splitted (.split prefix ".")
         module-or-class (module-or-class? splitted)
         sym-prefix (if module-or-class
