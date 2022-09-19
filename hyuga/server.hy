@@ -18,7 +18,6 @@
 (import hyuga.cursor *)
 (import hyuga.lspspec *)
 (import hyuga.log [logger])
-(import hyuga.inspect [eval-define!])
 
 (setv $SERVER (LanguageServer))
 
@@ -53,7 +52,7 @@
 
 (defn [($SERVER.feature TEXT_DOCUMENT_DID_OPEN)] did-open
   [params]
-  (eval-define! (-> params.text_document.uri
+  (parse-src! (-> params.text_document.uri
                     $SERVER.workspace.get_document
                     (. source))))
 
