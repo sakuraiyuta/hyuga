@@ -1,11 +1,11 @@
 (require hyrule * :readers *)
-(import hyrule.collections [prewalk])
+(import hyrule.collections [walk])
 
 (import hy.reserved)
 (import hy.models [Expression Keyword])
 
 (import sys)
-(import functools [reduce])
+(import functools [reduce partial])
 (import toolz.dicttoolz [merge])
 
 (import hyuga.log [logger])
@@ -42,41 +42,54 @@
                        (-> %1 second (get "type"))})))]
     (reduce merge local-syms {})))
 
-(defn -walk-eval!
+(defn -eval-and-add-sym!
   [-hyuga-eval-form]
-  "TODO: doc"
+  "TODO: docs"
+  (logger.debug f"-eval-and-add-sym!: ({(first -hyuga-eval-form)} {(second -hyuga-eval-form)})")
   (try
-    (when (-is-eval-target? -hyuga-eval-form)
-      (logger.debug
-        f"found def/import: ({(first -hyuga-eval-form)} {(second -hyuga-eval-form)})")
-      ;(hy.eval -hyuga-eval-form :locals (locals))
-      (hy.eval -hyuga-eval-form :locals (get-syms-for-local))
-      (when (= (-> -hyuga-eval-form first str) "import")
-        (hy.eval -hyuga-eval-form))
-      ;; TODO: parse defn/defmacro args and show in docs
-      ;; TODO: can't import module/class in current sourcetree
-      (->> (locals) (.items)
-           filter-add-targets
-           (map #%(add-sym! %1 "local"))
-           tuple)
-      (->> (globals) (.items)
-           filter-add-targets
-           (map #%(add-sym! %1 "globals"))
-           tuple)
-      (->> __macros__ (.items)
-           filter-add-targets
-           (map #%(add-sym! %1 "macro"))
-           tuple))
+    (hy.eval -hyuga-eval-form :locals (locals))
+    ;; TODO: parse defn/defmacro args and show in docs
+    ;; TODO: can't import module/class in current sourcetree
+    (->> (locals) (.items)
+         filter-add-targets
+         (map #%(add-sym! %1 "local"))
+         tuple)
+    (->> (globals) (.items)
+         filter-add-targets
+         (map #%(add-sym! %1 "globals"))
+         tuple)
+    (->> __macros__ (.items)
+         filter-add-targets
+         (map #%(add-sym! %1 "macro"))
+         tuple)
     (except [e BaseException]
-            (error-trace logger.warning "-walk-eval!" e)
-            -hyuga-eval-form))
-  -hyuga-eval-form)
+            (error-trace logger.warning "-eval-and-add-sym!" e))))
+
+(defn -try-eval!
+  [form]
+  "TODO: doc"
+  (when (-is-eval-target? form)
+    (try
+      (logger.debug
+        f"found def/import: ({(first form)} {(second form)})")
+      (-eval-and-add-sym! form)
+      (except [e BaseException]
+              (error-trace logger.warning "-try-eval" e)))))
+
+(defn -prewalk
+  [form]
+  "TODO: doc"
+  (walk -prewalk
+        #%(do (-try-eval! form)
+              %1)
+        #%(return %1)))
 
 (defn walk-eval!
   [forms]
   "TODO: doc"
   (try
-    (->> forms (prewalk -walk-eval!) tuple)
+    (-prewalk forms)
+    ;    (->> forms (prewalk #(-walk-eval! %1 False)) tuple)
     (except [e BaseException]
             (error-trace logger.warning "walk-eval!" e))))
 

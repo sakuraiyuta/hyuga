@@ -12,12 +12,12 @@
 (defn parse-src!
   [src]
   "TODO: doc"
-  (logger.debug f"parse-src!")
-  (for [loader-fn [(partial load-src! src)
-                   load-hy-macro!
+  (logger.debug f"parse-src! $SYMS.count={(count ($GLOBAL.get-$SYMS))}")
+  (for [loader-fn [load-builtin!
                    load-hy-special!
+                   load-hy-macro!
                    load-sys!
-                   load-builtin!]]
+                   (partial load-src! src)]]
     (loader-fn)))
 
 (defn get-details
