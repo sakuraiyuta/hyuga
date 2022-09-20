@@ -97,7 +97,7 @@
   (try
     (let [module (->> splitted butlast tuple (.join ".")
                       get-module-in-syms)]
-      (logger.debug "get-module-attrs: module={module}")
+      (logger.debug f"get-module-attrs: module={module}")
       (module.__dict__.items))
     (except [e BaseException]
             (error-trace logger.warning "get-module-attrs" e))))
