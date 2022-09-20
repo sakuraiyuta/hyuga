@@ -4,6 +4,8 @@
 (import hy.reserved :as -reserved)
 (import hy.models [Expression Keyword])
 
+(import os [environ listdir])
+(import os.path [isdir])
 (import sys [modules])
 (import re [sub])
 (import functools [reduce partial])
@@ -112,13 +114,19 @@
 (defn load-src!
   [src root-uri]
   "TODO: docs"
-  ;; FIXME: HyEvalError("module 'hy' has no attribute 'hyx_XampersandXreader'")
-  ;; when eval (require hyrule * :readers *).
-  ;; @see https://github.com/hylang/hy/issues/2291
   (try
-    (let [fixed-uri (sub "^[a-z]+://" "" root-uri)]
+    (logger.debug f"load-src!: started")
+    (let [fixed-uri (sub "^[a-z]+://" "" root-uri)
+          venv-lib-path f"{fixed-uri}/.venv/lib"]
       (hy.eval `(import sys))
-      (hy.eval `(sys.path.append ~fixed-uri)))
+      (hy.eval `(sys.path.append ~fixed-uri))
+      ;; add import path for poetry venv
+      (when (isdir venv-lib-path)
+        (logger.debug f"found venv: venv-path={venv-lib-path}")
+        (let [dirname (-> venv-lib-path listdir first)
+              target-path f"{venv-lib-path}/{dirname}/site-packages"]
+          (logger.debug f"adding module path: target-path={target-path}")
+          (hy.eval `(sys.path.append ~target-path)))))
     (let [forms (hy.read-many src)]
       (->> forms (map #%(walk-eval! %1 root-uri)) tuple)
       (logger.debug f"eval done. $SYMS.count={(->> ($GLOBAL.get-$SYMS) count)} root-uri={root-uri}"))
