@@ -1,11 +1,11 @@
 (require hyrule * :readers *)
 (import hyrule.collections [walk])
 
-(import hy.reserved)
+(import hy.reserved :as -reserved)
 (import hy.models [Expression Keyword])
 
-(import sys)
-(import re)
+(import sys [modules])
+(import re [sub])
 (import functools [reduce partial])
 (import toolz.dicttoolz [merge])
 
@@ -56,6 +56,11 @@
          tuple)
     (->> (globals) (.items)
          filter-add-targets
+         ;; FIXME: dirty hack: avoid filter when developping hyuga.
+         (filter #%(if (.endswith root-uri "hyuga")
+                     True
+                     (not-in (sym-hy->py (first %1)) -hyuga-syms)))
+         (filter #%(not (.startswith (first %1) "-hyuga-syms")))
          (map #%(add-sym! %1 "globals"))
          tuple)
     (->> __macros__ (.items)
@@ -97,8 +102,10 @@
   []
   "TODO: docs"
   ;; TODO: toggle enable/disable to list sys.modules
-  (->> (sys.modules.items) tuple
+  (->> (modules.items) tuple
        filter-add-targets
+       (filter #%(not (.startswith (first %1) "hyuga")))
+       (filter #%(not-in (sym-hy->py (first %1)) -hyuga-syms))
        (map #%(add-sym! %1 "sys"))
        tuple))
 
@@ -109,7 +116,7 @@
   ;; when eval (require hyrule * :readers *).
   ;; @see https://github.com/hylang/hy/issues/2291
   (try
-    (let [fixed-uri (re.sub "^[a-z]+://" "" root-uri)]
+    (let [fixed-uri (sub "^[a-z]+://" "" root-uri)]
       (hy.eval `(import sys))
       (hy.eval `(sys.path.append ~fixed-uri)))
     (let [forms (hy.read-many src)]
@@ -131,7 +138,7 @@
 (defn load-hy-special!
   []
   "TODO: docs"
-  (->> (hy.reserved.names)
+  (->> (-reserved.names)
        (map #%(tuple [%1 "<hy built-in special form>"]))
        filter-add-targets
        (map #%(add-sym! %1 "hy-special"))
@@ -145,3 +152,12 @@
        filter-add-targets
        (map #%(add-sym! %1 "hy-macro"))
        tuple))
+
+(setv -hyuga-syms
+      (let [sys-modules (-> (modules.keys) list)
+            hyuga-syms (-> (get modules "hyuga.sym.loader")
+                           dir)]
+        (map #%(when (in %1 sys-modules)
+                 (.remove hyuga-syms %1))
+             hyuga-syms)
+        hyuga-syms))
