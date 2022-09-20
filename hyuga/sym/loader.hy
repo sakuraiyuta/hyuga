@@ -144,15 +144,6 @@
        (map #%(add-sym! %1 "hy-special"))
        tuple))
 
-(defn load-hy-macro!
-  []
-  "TODO: docs"
-  (->> (-reserved.macros)
-       (map #%(tuple [%1 "<hy-macro>"]))
-       filter-add-targets
-       (map #%(add-sym! %1 "hy-macro"))
-       tuple))
-
 (setv -hyuga-syms
       (let [sys-modules (-> (modules.keys) list)
             hyuga-syms (-> (get modules "hyuga.sym.loader")
@@ -161,3 +152,14 @@
                  (.remove hyuga-syms %1))
              hyuga-syms)
         hyuga-syms))
+;(as->
+;  "
+;  (import sys)
+;  (defn testfn [] None)
+;  (defn testfn2
+;  []
+;  None)
+;  " it
+;  (hy.read-many it)
+;  (nth 2 it)
+;  (getattr it "end_line" 2))

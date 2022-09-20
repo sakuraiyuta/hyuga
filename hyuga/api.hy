@@ -15,7 +15,6 @@
   (logger.debug f"parse-src! $SYMS.count={(count ($GLOBAL.get-$SYMS))}")
   (for [loader-fn [load-builtin!
                    load-hy-special!
-                   load-hy-macro!
                    load-sys!
                    (partial load-src! src root-uri)]]
     (loader-fn)))
