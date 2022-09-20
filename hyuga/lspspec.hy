@@ -19,6 +19,8 @@
               ;; FIXME: pygls CompletionItemKind.Macro is not defined yet.
               ; "macro" 118115
               ; "macro" CompletionItemKind.Macro
+              "hy-special" CompletionItemKind.Keyword
+              "hy-macro" CompletionItemKind.Keyword
               "macro" CompletionItemKind.Function
               "module" CompletionItemKind.Module
               "function" CompletionItemKind.Function

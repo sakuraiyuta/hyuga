@@ -139,7 +139,7 @@
   []
   "TODO: docs"
   (->> (-reserved.names)
-       (map #%(tuple [%1 "<hy built-in special form>"]))
+       (map #%(tuple [%1 "<hy-special>"]))
        filter-add-targets
        (map #%(add-sym! %1 "hy-special"))
        tuple))
@@ -147,8 +147,8 @@
 (defn load-hy-macro!
   []
   "TODO: docs"
-  (->> (hy.reserved.macros)
-       (map #%(tuple [%1 "<hy built-in macro>"]))
+  (->> (-reserved.macros)
+       (map #%(tuple [%1 "<hy-macro>"]))
        filter-add-targets
        (map #%(add-sym! %1 "hy-macro"))
        tuple))
