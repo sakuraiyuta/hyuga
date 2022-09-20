@@ -35,40 +35,27 @@
                 (.startswith form-str "import")))
           else False))
 
-(defn get-syms-for-local
-  []
-  "TODO: docs"
-  (let [local-syms
-        (->> ($GLOBAL.get-$SYMS) .items
-             (map #%(return
-                      {(first %1)
-                       (-> %1 second (get "type"))})))]
-    (reduce merge local-syms {})))
-
 (defn -eval-and-add-sym!
   [-hyuga-eval-form root-uri]
   "TODO: docs"
   (logger.debug f"-eval-and-add-sym!: ({(first -hyuga-eval-form)} {(second -hyuga-eval-form)})")
   (try
-    (hy.eval -hyuga-eval-form :locals (globals))
     ;; TODO: parse defn/defmacro args and show in docs
-    (->> (locals) (.items)
-         filter-add-targets
-         (map #%(add-sym! %1 "local"))
-         tuple)
-    (->> (globals) (.items)
-         filter-add-targets
-         ;; FIXME: dirty hack: avoid filter when developping hyuga.
-         (filter #%(if (.endswith root-uri "hyuga")
-                     True
-                     (not-in (sym-hy->py (first %1)) -hyuga-syms)))
-         (filter #%(not (.startswith (first %1) "-hyuga-syms")))
-         (map #%(add-sym! %1 "globals"))
-         tuple)
-    (->> __macros__ (.items)
-         filter-add-targets
-         (map #%(add-sym! %1 "macro"))
-         tuple)
+    (hy.eval -hyuga-eval-form :locals (globals))
+    (let [pos (get-form-pos -hyuga-eval-form)]
+      (->> (globals) (.items)
+           filter-add-targets
+           ;; FIXME: dirty hack: avoid filter when developping hyuga.
+           (filter #%(if (.endswith root-uri "hyuga")
+                       True
+                       (not-in (sym-hy->py (first %1)) -hyuga-syms)))
+           (filter #%(not (.startswith (first %1) "-hyuga-syms")))
+           (map #%(add-sym! %1 "local" pos))
+           tuple)
+      (->> __macros__ (.items)
+           filter-add-targets
+           (map #%(add-sym! %1 "macro" pos))
+           tuple))
     (except [e BaseException]
             (error-trace logger.warning "-eval-and-add-sym!" e))))
 

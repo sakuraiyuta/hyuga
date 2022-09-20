@@ -2,6 +2,8 @@
 (require hyrule.collections [assoc])
 (import hyuga.log *)
 
+(import toolz.itertoolz *)
+
 ;; TODO: refactor(remove Global)
 (defclass Global [object]
   (defn __init__
@@ -9,13 +11,14 @@
     (setv self.$SYMS {}))
 
   (defn add-$SYMS
-    [self sym v scope docs]
+    [self sym v scope docs
+     [pos #(None None)]]
     (logger.debug
-      (.format "add-$SYMS: sym={}, v={}, scope={}"
-               sym v scope))
+      f"add-$SYMS: sym={sym}, v={v}, scope={scope} ln={(first pos)} cn={(second pos)}")
     (let [data {"sym" sym
                 "type" v
                 "scope" scope
+                "pos" pos
                 "docs" docs}]
       (assoc self.$SYMS sym data)
       data))

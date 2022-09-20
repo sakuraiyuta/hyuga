@@ -1,10 +1,11 @@
 (require hyrule * :readers *)
 (import hyrule.iterables [butlast drop-last])
 
+(import hy.models [List String])
+(import toolz.itertoolz *)
+
 (import hyuga.log *)
 (import hyuga.global [$GLOBAL])
-
-(import toolz.itertoolz *)
 
 (defn not-exclude-sym?
   [sym-hy/val]
@@ -19,14 +20,14 @@
           else expect-scope))
 
 (defn add-sym!
-  [sym-hy/val scope]
+  [sym-hy/val scope
+   [pos #(None None)]]
   "TODO: doc"
   (let [[sym-hy val] sym-hy/val
         docs (create-docs sym-hy val scope)]
-    ($GLOBAL.add-$SYMS sym-hy
-                       val
+    ($GLOBAL.add-$SYMS sym-hy val
                        (judge-scope val scope)
-                       docs)))
+                       docs pos)))
 
 (defn not-in-$SYM?
   [sym-hy/val]
@@ -101,3 +102,30 @@
       (module.__dict__.items))
     (except [e BaseException]
             (error-trace logger.warning "get-module-attrs" e))))
+
+(defn hy-module?
+  [module]
+  "TODO: src"
+  (->> module dir (in "hy")))
+
+(defn get-module-hy-src
+  [module]
+  "TODO: src"
+  (if (->> module dir (in "__file__"))
+    (let [fpath (module.__file__)]
+      (with [f (open fpath)]
+        (hy.read-many f :filename fpath)))
+    None))
+
+(defn get-form-pos
+  [form]
+  (branch (.startswith (first form) it)
+          "def" #((getattr form "start_line")
+                  (getattr form "start_column"))
+          "setv" #((getattr form "start_line")
+                   (getattr form "start_column"))
+          ;; TODO: implement
+          "import" #(None None)
+          else #(None None)))
+
+;; TODO: get fn/class info(name, args, annotations)
