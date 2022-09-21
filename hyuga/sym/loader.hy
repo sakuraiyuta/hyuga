@@ -13,6 +13,7 @@
 
 (import hyuga.log [logger])
 (import hyuga.sym.helper *)
+(import hyuga.sym.dummy)
 
 (defn add-sym!
   [sym-hy/val scope
@@ -73,15 +74,10 @@
   (try
     ;; TODO: parse defn/defmacro args and show in docs
     ;; TODO: need fix for Hy definition(defn/defmacro/defclass): don't eval and keep hy.models
-    (hy.eval -hyuga-eval-form :locals (globals))
+    (hy.eval -hyuga-eval-form :locals hyuga.sym.dummy.__dict__ :module hyuga.sym.dummy)
     (let [pos (get-form-pos -hyuga-eval-form)]
-      (->> (globals) (.items)
+      (->> hyuga.sym.dummy.__dict__ (.items)
            filter-add-targets
-           ;; FIXME: dirty hack: avoid filter when developping hyuga.
-           (filter #%(if (.endswith root-uri "hyuga")
-                       True
-                       (not-in (sym-hy->py (first %1)) -hyuga-syms)))
-           (filter #%(not (.startswith (first %1) "-hyuga-syms")))
            (map #%(add-sym! %1 "local" pos))
            tuple)
       (->> __macros__ (.items)
@@ -125,7 +121,6 @@
   (->> (modules.items) tuple
        filter-add-targets
        (filter #%(not (.startswith (first %1) "hyuga")))
-       (filter #%(not-in (sym-hy->py (first %1)) -hyuga-syms))
        (map #%(add-sym! %1 "sys"))
        tuple))
 
@@ -169,12 +164,3 @@
        filter-add-targets
        (map #%(add-sym! %1 "hy-special"))
        tuple))
-
-(setv -hyuga-syms
-      (let [sys-modules (-> (modules.keys) list)
-            hyuga-syms (-> (get modules "hyuga.sym.loader")
-                           dir)]
-        (map #%(when (in %1 sys-modules)
-                 (.remove hyuga-syms %1))
-             hyuga-syms)
-        hyuga-syms))

@@ -122,7 +122,7 @@
 
 (defn get-form-pos
   [form]
-  (branch (.startswith (first form) it)
+  (branch (.startswith (-> form first str) it)
           "def" #((getattr form "start_line")
                   (getattr form "start_column"))
           "setv" #((getattr form "start_line")
