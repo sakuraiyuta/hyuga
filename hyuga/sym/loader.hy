@@ -41,6 +41,7 @@
   (logger.debug f"-eval-and-add-sym!: ({(first -hyuga-eval-form)} {(second -hyuga-eval-form)})")
   (try
     ;; TODO: parse defn/defmacro args and show in docs
+    ;; TODO: need fix for Hy definition(defn/defmacro/defclass): don't eval and keep hy.models
     (hy.eval -hyuga-eval-form :locals (globals))
     (let [pos (get-form-pos -hyuga-eval-form)]
       (->> (globals) (.items)
@@ -68,22 +69,23 @@
         f"found def/import: ({(first form)} {(second form)})")
       (-eval-and-add-sym! form root-uri)
       (except [e BaseException]
-              (error-trace logger.warning "-try-eval" e)))))
+              (error-trace logger.warning "-try-eval" e))))
+  form)
 
 (defn -prewalk
-  [form root-uri]
+  [root-uri form]
   "TODO: doc"
-  (walk -prewalk
-        #%(do (-try-eval! form root-uri)
-              %1)
-        #%(return %1)))
+  (let [f #%(do (-try-eval! form root-uri)
+                %1)]
+    (walk (partial -prewalk root-uri)
+          #%(return %1)
+          (f form))))
 
 (defn walk-eval!
   [forms root-uri]
   "TODO: doc"
   (try
-    (-prewalk forms root-uri)
-    ;    (->> forms (prewalk #(-walk-eval! %1 False)) tuple)
+    (-prewalk root-uri forms)
     (except [e BaseException]
             (error-trace logger.warning "walk-eval!" e))))
 
