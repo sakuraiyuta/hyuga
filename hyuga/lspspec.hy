@@ -31,7 +31,7 @@
 (defn create-item
   [word symdata]
   "TODO: doc"
-  (logger.debug f"create-item symdata={symdata}")
+  (logger.debug f"create-item syms={(.keys symdata)}")
   (let [prefix-splitted (.split word ".")
         sym-splitted (-> (:sym symdata) (.split "."))
         insert-text (if (module-or-class? prefix-splitted)

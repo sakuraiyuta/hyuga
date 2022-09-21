@@ -147,14 +147,3 @@
                  (.remove hyuga-syms %1))
              hyuga-syms)
         hyuga-syms))
-;(as->
-;  "
-;  (import sys)
-;  (defn testfn [] None)
-;  (defn testfn2
-;  []
-;  None)
-;  " it
-;  (hy.read-many it)
-;  (nth 2 it)
-;  (getattr it "end_line" 2))

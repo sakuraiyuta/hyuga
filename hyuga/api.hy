@@ -60,5 +60,8 @@
     (->> ($GLOBAL.get-$SYMS) .items
          (filter #%(.startswith (first %1) module-or-class))
          (filter #%(.startswith (-> %1 first (.split ".") last) sym-prefix))
-         (map #%(get-details (first %1)))
+         ;; exclude duplicated module name(e.g. `sys.sys`)
+         (filter #%(not (and module-or-class
+                             (-> %1 first (= module-or-class)))))
+         (map second)
          tuple)))
