@@ -128,4 +128,17 @@
           "import" #(None None)
           else #(None None)))
 
-;; TODO: get fn/class info(name, args, annotations)
+(defn get-defn-summary
+  [form]
+  (setv ret {"name" None
+             "decorator" None
+             "args" None})
+  (if (-> form second (isinstance List))
+    (do
+      (.update ret {"decorator" (second form)})
+      (.update ret {"name" (nth 2 form)})
+      (.update ret {"args" (nth 3 form)}))
+    (do
+      (.update ret {"name" (second form)})
+      (.update ret {"args" (->> form (nth 2))})))
+  ret)
