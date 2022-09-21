@@ -14,6 +14,16 @@
 (import hyuga.log [logger])
 (import hyuga.sym.helper *)
 
+(defn add-sym!
+  [sym-hy/val scope
+   [pos #(None None)]]
+  "TODO: doc"
+  (let [[sym-hy val] sym-hy/val
+        docs (create-docs sym-hy val scope)]
+    ($GLOBAL.add-$SYMS sym-hy val
+                       (judge-scope val scope)
+                       docs pos)))
+
 (defn filter-add-targets
   [sym-py/vals]
   "TODO: doc"
@@ -23,17 +33,38 @@
            (filter not-exclude-sym?))
       #()))
 
-(defn -is-eval-target?
+(defn -def-or-setv?
   [form]
-  (branch (isinstance form it)
-          Keyword False
-          Expression
-          (let [form-str (-> form first str)]
-            (or (.startswith form-str "require")
-                (.startswith form-str "def")
-                (.startswith form-str "setv")
-                (.startswith form-str "import")))
-          else False))
+  "TODO: doc"
+  (if (isinstance form Expression)
+    (let [sym (-> form first str)]
+      (or (.startswith sym "def")
+          (.startswith sym "setv")))
+    False))
+
+(defn -eval-target?
+  [form]
+  "TODO: doc"
+  (if (isinstance form Expression)
+    (let [sym (-> form first str)]
+      (or (.startswith sym "require")
+          (.startswith sym "import")
+;          (.startswith sym "defmacro")
+          (.startswith sym "def")))
+    False))
+
+;; TODO: WIP for textDocument/definition
+(defn -add-hy-sym!
+  [form]
+  "TODO: doc"
+  (print (first form))
+  (let [summary (branch (= it (-> form first str))
+                        "defn" (get-defn-summary form)
+                        "defclass" (get-defclass-summary form)
+                        else (get-setv-summary form))]
+    (add-sym! [(get summary "name") form]
+              "local"
+              (get summary "pos"))))
 
 (defn -eval-and-add-sym!
   [-hyuga-eval-form root-uri]
@@ -63,13 +94,11 @@
 (defn -try-eval!
   [form root-uri]
   "TODO: doc"
-  (when (-is-eval-target? form)
-    (try
-      (logger.debug
-        f"found def/import: ({(first form)} {(second form)})")
-      (-eval-and-add-sym! form root-uri)
-      (except [e BaseException]
-              (error-trace logger.warning "-try-eval" e))))
+  (when (-eval-target? form)
+    (-eval-and-add-sym! form root-uri))
+;  (branch (it form)
+;          -eval-target? (-eval-and-add-sym! form root-uri)
+;          -def-or-setv? (-add-hy-sym! form))
   form)
 
 (defn -prewalk
@@ -104,7 +133,7 @@
   [src root-uri]
   "TODO: docs"
   (try
-    (logger.debug f"load-src!: started")
+    (logger.debug f"load-src!: started. $SYMS.count={(->> ($GLOBAL.get-$SYMS) count)} root-uri={root-uri}")
     (let [fixed-uri (sub "^[a-z]+://" "" root-uri)
           venv-lib-path f"{fixed-uri}/.venv/lib"]
       (hy.eval `(import sys))
@@ -118,11 +147,11 @@
           (hy.eval `(sys.path.append ~target-path)))))
     (let [forms (hy.read-many src)]
       (->> forms (map #%(walk-eval! %1 root-uri)) tuple)
-      (logger.debug f"eval done. $SYMS.count={(->> ($GLOBAL.get-$SYMS) count)} root-uri={root-uri}"))
+      )
     (except
       [e BaseException]
       (error-trace logger.warning "load-src!" e))
-    (else (logger.debug "load-src! done."))))
+    (else (logger.debug f"load-src!: done. $SYMS.count={(->> ($GLOBAL.get-$SYMS) count)}"))))
 
 (defn load-builtin!
   []
