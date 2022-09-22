@@ -4,9 +4,14 @@
 
 (import hy.models [Object Expression List String Symbol])
 (import toolz.itertoolz *)
+(import re [sub])
 
 (import hyuga.log *)
 (import hyuga.global [$GLOBAL])
+
+(defn remove-uri-prefix
+  [uri]
+  (sub "^[a-z]+://" "" uri))
 
 (defn get-ns
   [symkey]

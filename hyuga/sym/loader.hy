@@ -1,19 +1,38 @@
 (require hyrule * :readers *)
+(require hyrule.collections [assoc])
 (import hyrule.collections [walk])
 
 (import hy.reserved :as -reserved)
 (import hy.models [Expression Keyword List])
+(import hy.compiler [HyASTCompiler])
+(import hy.reader [HyReader])
 
 (import os [environ listdir])
 (import os.path [isdir])
 (import sys [modules])
-(import re [sub])
 (import functools [reduce partial])
 (import toolz.dicttoolz [merge])
 
 (import hyuga.log [logger])
 (import hyuga.sym.helper *)
 (import hyuga.sym.dummy)
+
+; {"{doc-uri}" {"compiler" HyASTCompiler
+;               "reader" HyReader}}
+(setv $compiler {})
+
+(defn get-hy-builder
+  [doc-uri mod key]
+  (if (in doc-uri ($compiler.keys))
+    (-> (get $compiler doc-uri) (get key))
+    (do
+      (logger.debug f"creating new compiler: doc-uri={doc-uri}, mod={mod}")
+      (assoc $compiler doc-uri
+             {"compiler" (HyASTCompiler
+                           :module mod
+                           :filename (remove-uri-prefix doc-uri))
+              "reader" (HyReader)})
+      (get-hy-builder doc-uri mod key))))
 
 (defn -load!
   [prefix syms [pos None] [uri None]]
@@ -74,11 +93,12 @@
 ;              "local"
 ;              (get summary "pos"))))
 
-(defn -dummy-eval
-  [form]
+(defn -dummy-eval!
+  [form [doc-uri "file:///dummy"] [mod "hyuga.sym.dummy"]]
+  (logger.debug f"-dummy-eval!: form={(hy.repr form)}, doc-uri={doc-uri}, mod={mod}")
   (hy.eval form
            :locals hyuga.sym.dummy.__dict__
-           :module hyuga.sym.dummy))
+           :compiler (get-hy-builder doc-uri mod "compiler")))
 
 (defn -cleanup-dummy-syms!
   [[summary {"includes" []}]]
@@ -93,19 +113,24 @@
        tuple))
 
 (defn -imported-hy-src
-  [form]
+  [form doc-uri]
+  (logger.debug f"-imported-hy-src: trying to import {(second form)} doc-uri={doc-uri}")
   (-> f"({(first form)} {(second form)})"
-      hy.read -dummy-eval)
+      (hy.read)
+      (-dummy-eval! doc-uri))
+  (logger.debug f"-imported-hy-src: imported {(second form)} doc-uri={doc-uri}")
   (let [dic (-> f"{(second form)}.__dict__"
-                hy.read -dummy-eval)
+                hy.read (-dummy-eval! doc-uri))
         keys (.keys dic)]
     (when (and (in "hy" keys)
                (in "__file__" keys))
       (with [file (open (get dic "__file__"))]
-        (logger.debug f"loading imported hy-source: filename={file.name}")
-        (-> (file.read)
-            (hy.read-many :filename file.name)
-            (walk-eval! "" f"file://{file.name}" (second form)))))))
+        (let [fname file.name]
+          (logger.debug f"hy-source detected: try to read. filename={fname}")
+          (-> (file.read)
+              (load-src! "" f"file://{fname}" (second form))
+              tuple))
+        ))))
 
 (defn -load-macro!
   []
@@ -113,8 +138,11 @@
 
 (defn -load-local!
   [prefix pos uri]
+  (logger.debug f"-load-local! prefix={prefix} pos={pos} uri={uri}")
   (-load! prefix
-          (hyuga.sym.dummy.__dict__.items)
+          (-> f"({prefix}.__dict__.items)"
+              hy.read
+              (-dummy-eval! uri prefix))
           pos
           uri))
 
@@ -129,14 +157,14 @@
           import? (= "import" (-> form first str))]
       (when (and import?
                  (not prefix))
-        (logger.debug f"import found. try to load {(second form)}")
+        (logger.debug f"import found. try to import {(second form)}")
         ;(-cleanup-dummy-syms! (get-import-summary form))
         ;(-cleanup-dummy-syms!)
-        (-imported-hy-src form)
+        (-imported-hy-src form doc-uri)
         (logger.debug f"import complete. try to load {(second form)}"))
-      (-dummy-eval form)
+      (-dummy-eval! form doc-uri (or prefix "hyuga.sym.dummy"))
       (-load-macro!)
-      (-load-local! (or prefix "local") pos doc-uri)
+      (-load-local! (or prefix "hyuga.sym.dummy") pos doc-uri)
       ;(-cleanup-dummy-syms!)
       )
     (except [e BaseException]
@@ -147,9 +175,6 @@
   "TODO: doc"
   (when (-eval-target? form)
     (-eval-and-add-sym! form root-uri doc-uri prefix))
-  ;  (branch (it form)
-  ;          -eval-target? (-eval-and-add-sym! form root-uri)
-  ;          -def-or-setv? (-add-hy-sym! form))
   form)
 
 (defn -prewalk
@@ -176,11 +201,11 @@
   (-load! "sys" (modules.items)))
 
 (defn load-src!
-  [src root-uri doc-uri]
+  [src root-uri doc-uri prefix]
   "TODO: docs"
   (try
     (logger.debug f"load-src!: started. $SYMS.count={(->> ($GLOBAL.get-$SYMS) count)} root-uri={root-uri} doc-uri={doc-uri}")
-    (let [fixed-uri (sub "^[a-z]+://" "" root-uri)
+    (let [fixed-uri (remove-uri-prefix root-uri)
           venv-lib-path f"{fixed-uri}/.venv/lib"]
       (hy.eval `(import sys))
       (hy.eval `(sys.path.append ~fixed-uri))
@@ -191,6 +216,8 @@
               target-path f"{venv-lib-path}/{dirname}/site-packages"]
           (logger.debug f"adding module path: target-path={target-path}")
           (hy.eval `(sys.path.append ~target-path)))))
+    (-dummy-eval! `(import hyuga.sym.dummy)
+                  doc-uri "hyuga.sym.dummy")
     (let [forms (hy.read-many src)]
       (->> forms (map #%(walk-eval! %1 root-uri doc-uri "")) tuple))
     (except

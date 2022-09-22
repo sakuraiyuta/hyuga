@@ -16,7 +16,7 @@
   (for [loader-fn [load-builtin!
                    load-hy-special!
                    load-sys!
-                   (partial load-src! src root-uri doc-uri)]]
+                   (partial load-src! src root-uri doc-uri "hyuga.sym.dummy")]]
     (loader-fn)))
 
 (defn get-details
