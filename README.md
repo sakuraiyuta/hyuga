@@ -11,12 +11,20 @@ Verified-working Hy version: [0.24.0](https://github.com/hylang/hy/tree/stable)
 
 - `textDocument/did{Open,Change}`
 - `textDocument/completion`
-  - Presents candidates all modules installed in your system, classes/functions in opening source.
+  - Show candidates all modules installed in your system, classes/functions in opening source. (plain Python-symbols included)
+- `textDocument/definition`
+  - Jump to definition. (currently refered hy-source only)
 - `textDocument/hover`
 
 ## Screenshots
 
-![Hyuga sample movie](https://raw.githubusercontent.com/sakuraiyuta/hyuga/images/hyuga-image.gif)
+### Completion
+
+![Hyuga sample movie: completion](https://raw.githubusercontent.com/sakuraiyuta/hyuga/images/hyuga-image-completion.gif)
+
+### Jump to definition
+
+![Hyuga sample movie: jump-to-definition](https://raw.githubusercontent.com/sakuraiyuta/hyuga/images/hyuga-image-jump-def.gif)
 
 
 ## Install
