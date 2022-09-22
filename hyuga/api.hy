@@ -23,7 +23,7 @@
   [sym-hy]
   "TODO: doc"
   (logger.debug f"get-details sym-hy={sym-hy}" )
-  ;; TODO: try get info directly if sym not found
+  ;; TODO: try to get info directly if sym not found
   (-> ($GLOBAL.get-$SYMS) (get sym-hy)))
 
 (defn get-candidates
@@ -39,29 +39,42 @@
   \"sym\" \"delattr\"})
   ```
   "
-  (logger.debug "get-candidates: $SYMS.count={(count ($GLOBAL.get-$SYMS))}")
+  (logger.debug f"get-candidates: prefix={prefix}, $SYMS.count={(count ($GLOBAL.get-$SYMS))}")
   (let [splitted (.split prefix ".")
         module-or-class (module-or-class? splitted)
         sym-prefix (if module-or-class
                      (last splitted)
                      prefix)]
-    (logger.debug (.format "module-or-class={}" module-or-class))
+    (logger.debug f"module-or-class={module-or-class}, sym-prefix={sym-prefix}")
     (when module-or-class
-      (->> (get-module-attrs splitted)
+      (->> (get-module-attrs module-or-class)
            (map #%(+ [] [(as-> splitted it
                            (drop-last 1 it)
                            (list it)
                            (+ it [(first %1)])
                            (.join "." it))
                          (second %1)]))
-           filter-add-targets
+           (filter-add-targets module-or-class)
            (map #%(add-sym! %1 "module"))
            tuple))
+    ;;FIXME
     (->> ($GLOBAL.get-$SYMS) .items
-         (filter #%(.startswith (first %1) module-or-class))
-         (filter #%(.startswith (-> %1 first (.split ".") last) sym-prefix))
+         (filter #%(.startswith (get-ns (first %1)) module-or-class))
+         (filter #%(.startswith (get-sym (first %1)) sym-prefix))
          ;; exclude duplicated module name(e.g. `sys.sys`)
-         (filter #%(not (and module-or-class
-                             (-> %1 first (= module-or-class)))))
+         ; (filter #%(not (and module-or-class
+         ;                     (-> %1 get-ns (= module-or-class)))))
          (map second)
          tuple)))
+
+(defn get-exact-matches
+  [sym-tgt]
+  (logger.debug f"get-exact-matches sym-tgt={sym-tgt}, $SYMS.count={(count ($GLOBAL.get-$SYMS))}")
+  (->> ($GLOBAL.get-$SYMS) .items
+       (filter #%(.endswith (first %1) sym-tgt))
+       ;; TODO: jump by module name(e.g. sym-tgt=hyrule.collections)
+       (filter #%(let [[scope full-sym] (get-scope/ns (first %1))
+                       [ns sym] (get-ns/sym full-sym)]
+                   (or (= scope sym-tgt)
+                       (= sym sym-tgt))))
+       tuple))
