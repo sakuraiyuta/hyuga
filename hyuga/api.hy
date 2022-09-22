@@ -10,13 +10,13 @@
 (import hyuga.sym.helper *)
 
 (defn parse-src!
-  [src root-uri]
+  [src root-uri doc-uri]
   "TODO: doc"
   (logger.debug f"parse-src! $SYMS.count={(count ($GLOBAL.get-$SYMS))}")
   (for [loader-fn [load-builtin!
                    load-hy-special!
                    load-sys!
-                   (partial load-src! src root-uri)]]
+                   (partial load-src! src root-uri doc-uri)]]
     (loader-fn)))
 
 (defn get-details

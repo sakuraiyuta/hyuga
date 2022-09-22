@@ -16,14 +16,14 @@
 (import hyuga.sym.dummy)
 
 (defn add-sym!
-  [sym-hy/val scope
-   [pos #(None None)]]
+  [sym-hy/val scope [pos None] [doc-uri None]]
   "TODO: doc"
   (let [[sym-hy val] sym-hy/val
         docs (create-docs sym-hy val scope)]
-    ($GLOBAL.add-$SYMS sym-hy val
-                       (judge-scope val scope)
-                       docs pos)))
+    ($GLOBAL.add-$SYMS
+      {"sym" sym-hy "type" val "uri" doc-uri
+       "scope" (judge-scope val scope)
+       "docs" docs "pos" pos})))
 
 (defn filter-add-targets
   [sym-py/vals]
@@ -68,7 +68,7 @@
               (get summary "pos"))))
 
 (defn -eval-and-add-sym!
-  [-hyuga-eval-form root-uri]
+  [-hyuga-eval-form root-uri doc-uri]
   "TODO: docs"
   (logger.debug f"-eval-and-add-sym!: ({(first -hyuga-eval-form)} {(second -hyuga-eval-form)})")
   (try
@@ -78,7 +78,7 @@
     (let [pos (get-form-pos -hyuga-eval-form)]
       (->> hyuga.sym.dummy.__dict__ (.items)
            filter-add-targets
-           (map #%(add-sym! %1 "local" pos))
+           (map #%(add-sym! %1 "local" pos doc-uri))
            tuple)
       (->> __macros__ (.items)
            filter-add-targets
@@ -88,29 +88,29 @@
             (error-trace logger.warning "-eval-and-add-sym!" e))))
 
 (defn -try-eval!
-  [form root-uri]
+  [form root-uri doc-uri]
   "TODO: doc"
   (when (-eval-target? form)
-    (-eval-and-add-sym! form root-uri))
+    (-eval-and-add-sym! form root-uri doc-uri))
 ;  (branch (it form)
 ;          -eval-target? (-eval-and-add-sym! form root-uri)
 ;          -def-or-setv? (-add-hy-sym! form))
   form)
 
 (defn -prewalk
-  [root-uri form]
+  [root-uri doc-uri form]
   "TODO: doc"
-  (let [f #%(do (-try-eval! form root-uri)
+  (let [f #%(do (-try-eval! form root-uri doc-uri)
                 %1)]
-    (walk (partial -prewalk root-uri)
+    (walk (partial -prewalk root-uri doc-uri)
           #%(return %1)
           (f form))))
 
 (defn walk-eval!
-  [forms root-uri]
+  [forms root-uri doc-uri]
   "TODO: doc"
   (try
-    (-prewalk root-uri forms)
+    (-prewalk root-uri doc-uri forms)
     (except [e BaseException]
             (error-trace logger.warning "walk-eval!" e))))
 
@@ -125,10 +125,10 @@
        tuple))
 
 (defn load-src!
-  [src root-uri]
+  [src root-uri doc-uri]
   "TODO: docs"
   (try
-    (logger.debug f"load-src!: started. $SYMS.count={(->> ($GLOBAL.get-$SYMS) count)} root-uri={root-uri}")
+    (logger.debug f"load-src!: started. $SYMS.count={(->> ($GLOBAL.get-$SYMS) count)} root-uri={root-uri} doc-uri={doc-uri}")
     (let [fixed-uri (sub "^[a-z]+://" "" root-uri)
           venv-lib-path f"{fixed-uri}/.venv/lib"]
       (hy.eval `(import sys))
@@ -141,8 +141,7 @@
           (logger.debug f"adding module path: target-path={target-path}")
           (hy.eval `(sys.path.append ~target-path)))))
     (let [forms (hy.read-many src)]
-      (->> forms (map #%(walk-eval! %1 root-uri)) tuple)
-      )
+      (->> forms (map #%(walk-eval! %1 root-uri doc-uri)) tuple))
     (except
       [e BaseException]
       (error-trace logger.warning "load-src!" e))

@@ -2,18 +2,10 @@
 (import toolz.itertoolz *)
 (import pygls.lsp.methods [COMPLETION
                            HOVER
+                           DEFINITION
                            TEXT_DOCUMENT_DID_CHANGE
                            TEXT_DOCUMENT_DID_CLOSE
                            TEXT_DOCUMENT_DID_OPEN])
-(import pygls.lsp.types [CompletionItem
-                         CompletionList
-                         CompletionOptions
-                         CompletionParams
-                         ConfigurationParams
-                         ConfigurationItem
-                         Hover
-                         MarkupContent
-                         MarkupKind])
 (import pygls.server [LanguageServer])
 
 (import hyuga.api *)
@@ -46,11 +38,19 @@
                               params.position.character)]
     (logger.debug (.format "hover word={}" (repr word)))
     (when (is-not word None)
-      (let [docs (-> word get-details :docs)]
-        (Hover
-          :contents (MarkupContent
-                      :kind MarkupKind.PlainText
-                      :value docs))))))
+      (create-hover (-> word get-details :docs)))))
+
+(defn [($SERVER.feature DEFINITION)] definition
+  [params]
+  (let [word (cursor-word-all $SERVER
+                              params.text_document.uri
+                              params.position.line
+                              params.position.character)]
+    (logger.debug (.format "definition word={}" (repr word)))
+    (when (is-not word None)
+      (let+ [{pos "pos" uri "uri"} (-> word get-details)]
+        (when (and pos uri)
+          (create-location pos uri))))))
 
 (defn [($SERVER.feature TEXT_DOCUMENT_DID_OPEN)] did-open
   [params]
@@ -58,7 +58,8 @@
   (parse-src! (-> params.text_document.uri
                   $SERVER.workspace.get_document
                   (. source))
-              $SERVER.workspace.root_uri))
+              $SERVER.workspace.root_uri
+              params.text_document.uri))
 
 (defn [($SERVER.feature TEXT_DOCUMENT_DID_CLOSE)] did-close
   [params]

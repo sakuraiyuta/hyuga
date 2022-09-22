@@ -128,8 +128,8 @@
           "setv" #((getattr form "start_line")
                    (getattr form "start_column"))
           ;; TODO: implement
-          "import" #(None None)
-          else #(None None)))
+          "import" None
+          else None))
 
 (defn get-defn-summary
   [form]

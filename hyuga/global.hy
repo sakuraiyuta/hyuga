@@ -11,17 +11,19 @@
     (setv self.$SYMS {}))
 
   (defn add-$SYMS
-    [self sym v scope docs
-     [pos #(None None)]]
-    (logger.debug
-      f"add-$SYMS: sym={sym}, v={v}, scope={scope} ln={(first pos)} cn={(second pos)}")
-    (let [data {"sym" sym
-                "type" v
-                "scope" scope
-                "pos" pos
-                "docs" docs}]
-      (assoc self.$SYMS sym data)
-      data))
+    [self data]
+    ;; {"sym" sym
+    ;;  "type" v
+    ;;  "scope" scope
+    ;;  "pos" pos
+    ;;  "uri" uri
+    ;;  "docs" docs}
+    (let+ [{sym "sym" v "v" scope "scope"
+            pos "pos" docs "docs" uri "uri"} data]
+      (logger.debug
+        f"add-$SYMS: sym={sym}, scope={scope}, pos={pos}, uri={uri}")
+      (assoc self.$SYMS sym data))
+    data)
 
   (defn clean-$SYMS
     [self]

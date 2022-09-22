@@ -1,4 +1,6 @@
 (require hyrule * :readers *)
+(import hyrule.misc *)
+
 (import toolz.itertoolz *)
 (import pygls.lsp.types [CompletionItem
                          CompletionList
@@ -6,8 +8,12 @@
                          CompletionParams
                          CompletionItemKind
                          Hover
+                         Range
+                         Location
+                         Position
                          MarkupContent
                          MarkupKind])
+
 (import hyuga.log *)
 (import hyuga.sym.helper *)
 
@@ -57,3 +63,20 @@
   (logger.debug f"create-completion-list items={items}")
   (CompletionList :is_incomplete is-incomplete
                   :items items))
+
+(defn create-hover
+  [docs]
+  (Hover
+    :contents (MarkupContent
+                :kind MarkupKind.PlainText
+                :value docs)))
+
+(defn create-location
+  [pos uri]
+  "TODO: doc"
+  (let [obj-pos (Position :line (-> pos first dec)
+                          :character (-> pos second dec))
+        obj-range (Range :start obj-pos
+                         :end obj-pos)]
+    (Location :uri uri
+              :range obj-range)))
