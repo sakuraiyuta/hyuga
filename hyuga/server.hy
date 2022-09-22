@@ -24,8 +24,7 @@
                           params.position.character)]
     (logger.debug f"completion word={(repr word)}")
     (if (is-not word None)
-      (->> (get-candidates word)
-           (create-items word)
+      (->> (create-items word)
            create-completion-list)
       (create-completion-list []))))
 
@@ -36,7 +35,7 @@
                               params.text_document.uri
                               params.position.line
                               params.position.character)]
-    (logger.debug (.format "hover word={}" (repr word)))
+    (logger.debug f"hover: word={word}")
     (when (is-not word None)
       (create-hover (-> word get-details :docs)))))
 
@@ -46,11 +45,12 @@
                               params.text_document.uri
                               params.position.line
                               params.position.character)]
-    (logger.debug (.format "definition word={}" (repr word)))
+    (logger.debug f"definition: word={word}")
     (when (is-not word None)
-      (let+ [{pos "pos" uri "uri"} (-> word get-details)]
-        (when (and pos uri)
-          (create-location pos uri))))))
+      (let [matches (get-exact-matches word)
+            locations (create-location-list matches)]
+        (logger.debug f"locations={locations}")
+        locations))))
 
 (defn [($SERVER.feature TEXT_DOCUMENT_DID_OPEN)] did-open
   [params]

@@ -1,12 +1,44 @@
 (require hyrule * :readers *)
-(import hyrule.iterables [butlast drop-last])
+(import hyrule.iterables [butlast drop-last rest])
 (import hyrule.collections [prewalk walk])
 
 (import hy.models [Object Expression List String Symbol])
 (import toolz.itertoolz *)
+(import re [sub])
 
 (import hyuga.log *)
 (import hyuga.global [$GLOBAL])
+
+(defn remove-uri-prefix
+  [uri]
+  (sub "^[a-z]+://" "" uri))
+
+(defn get-ns
+  [symkey]
+  (-> symkey get-scope/ns second get-ns/sym first))
+
+(defn get-sym
+  [symkey]
+  (-> symkey get-scope/ns second get-ns/sym second))
+
+(defn get-ns/sym
+  [val]
+  (let [splitted (.split val ".")]
+    [(->> splitted
+       (drop-last 1)
+       tuple
+       (.join "."))
+     (last splitted)]))
+
+(defn get-scope/ns
+  [symkey]
+  (.split symkey "\\"))
+
+(defn get-full-sym
+  [prefix sym]
+  (if prefix
+    (+ prefix "\\" sym)
+    sym))
 
 (defn not-exclude-sym?
   [sym-hy/val]
@@ -21,12 +53,14 @@
           else expect-scope))
 
 (defn not-in-$SYM?
-  [sym-hy/val]
-  (not (in (first sym-hy/val) (.keys ($GLOBAL.get-$SYMS)))))
+  [prefix sym-hy/val]
+  (let [full-sym (get-full-sym prefix (first sym-hy/val))
+        keys (.keys ($GLOBAL.get-$SYMS))]
+    (not (in full-sym keys))))
 
 (defn sym-py/val->sym-hy/val
   [sym-py/val]
-  [(-> sym-py/val first sym-py->hy)
+  [(->> sym-py/val first sym-py->hy)
    (second sym-py/val)])
 
 (defn sym-py->hy
@@ -91,16 +125,15 @@
   "TODO: doc"
   (as-> ($GLOBAL.get-$SYMS) it
     (.items it)
-    (filter #%(= (first %1) sym-hy) it)
+    (filter #%(= (-> %1 first get-sym) sym-hy) it)
     (first it)
-    (get (second it) "type")))
+    (:type (second it))))
 
 (defn get-module-attrs
-  [splitted]
+  [module-name]
   "TODO: doc"
   (try
-    (let [module (->> splitted butlast tuple (.join ".")
-                      get-module-in-syms)]
+    (let [module (get-module-in-syms module-name)]
       (logger.debug f"get-module-attrs: module={module}")
       (module.__dict__.items))
     (except [e BaseException]
@@ -186,3 +219,22 @@
                        "(can't eval)"))
    "pos" #((getattr (second form) "start_line")
            (getattr (second form) "start_column"))})
+
+(defn get-import-summary
+  [form]
+  (setv ret {"name" (-> form second str)
+             "includes" []})
+  (let [options (list (drop 2 form))]
+    (print (count options))
+    (when (-> options count (> 0))
+      (let [option (first options)]
+        (if (isinstance option List)
+          (.update ret {"includes" (->> option
+                                        (walk #%(-> %1 hy.repr (.lstrip "'"))
+                                          #%(return %1))
+                                        hy.eval
+                                        (filter #%(not (= ":as" %1)))
+                                        (map sym-hy->py)
+                                        tuple)})
+          (.update ret {"includes" "*"})))))
+  ret)

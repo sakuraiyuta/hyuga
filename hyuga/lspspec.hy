@@ -15,6 +15,7 @@
                          MarkupKind])
 
 (import hyuga.log *)
+(import hyuga.api *)
 (import hyuga.sym.helper *)
 
 (defn decide-kind
@@ -37,30 +38,30 @@
 (defn create-item
   [word symdata]
   "TODO: doc"
-  (logger.debug f"create-item syms={(.keys symdata)}")
-  (let [prefix-splitted (.split word ".")
-        sym-splitted (-> (:sym symdata) (.split "."))
-        insert-text (if (module-or-class? prefix-splitted)
-                      (-> sym-splitted last)
-                      (:sym symdata))]
+  (logger.debug f"create-item symdata={symdata}")
+  (let+ [{symkey "sym" docs "docs" typev "type"} symdata
+         prefix-splitted (.split word ".")
+         [scope full-sym] (get-scope/ns symkey)
+         [ns sym] (get-ns/sym full-sym)
+         insert-text (if (module-or-class? prefix-splitted)
+                       sym
+                       sym)]
     (CompletionItem
-      :label f"{(:sym symdata)} [{(:scope symdata)}]"
+      :label f"{sym}\t[{scope}]\t<{full-sym}>"
       :insert_text insert-text
-      :detail (:docs symdata)
-      :kind (decide-kind (str (:type symdata))))))
+      :detail docs
+      :kind (decide-kind (str typev)))))
 
 (defn create-items
-  [word candidates]
+  [word]
   "TODO: doc"
-  (logger.debug f"create-items candidates={(repr candidates)}")
-  (->> candidates
+  (->> (get-candidates word)
        (map #%(create-item word %1))
        list))
 
 (defn create-completion-list
   [items [is-incomplete False]]
   "TODO: doc"
-  (logger.debug f"create-completion-list items={items}")
   (CompletionList :is_incomplete is-incomplete
                   :items items))
 
@@ -80,3 +81,13 @@
                          :end obj-pos)]
     (Location :uri uri
               :range obj-range)))
+
+(defn create-location-list
+  [sym/vals]
+  "TODO: doc"
+  (->> sym/vals
+       (map #%(let+ [{pos "pos" uri "uri"} (second %1)]
+                (when (and pos uri)
+                  (create-location pos uri))))
+       (filter #%(is-not %1 None))
+       list))
