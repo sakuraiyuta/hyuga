@@ -2,7 +2,8 @@
 (require hyrule.collections [assoc])
 (import hyrule.collections [walk])
 
-(import hy.reserved :as -reserved)
+(import hy.reserved [macros :as hy-macros
+                     names :as hy-specials])
 (import hy.models [Expression Keyword List])
 (import hy.compiler [HyASTCompiler])
 (import hy.reader [HyReader])
@@ -10,6 +11,7 @@
 (import os [environ listdir])
 (import os.path [isdir])
 (import sys [modules])
+(import re)
 (import functools [reduce partial])
 (import toolz.dicttoolz [merge])
 
@@ -95,42 +97,42 @@
 
 (defn -dummy-eval!
   [form [doc-uri "file:///dummy"] [mod "hyuga.sym.dummy"]]
-  (logger.debug f"-dummy-eval!: form={(hy.repr form)}, doc-uri={doc-uri}, mod={mod}")
   (hy.eval form
            :locals hyuga.sym.dummy.__dict__
            :compiler (get-hy-builder doc-uri mod "compiler")))
 
 (defn -cleanup-dummy-syms!
-  [[summary {"includes" []}]]
-  (->> hyuga.sym.dummy.__dict__ (.keys) tuple
-       (filter #%(not (or (and (.startswith %1 "__")
-                               (.endswith %1 "__"))
-                          (= "hy" %1))))
-       (filter #%(branch (isinstance (:includes summary) it)
-                   List (not (in %1 (:includes summary)))
-                   str False))
-       (map #%(.pop hyuga.sym.dummy.__dict__ %1))
-       tuple))
+  [doc-uri mod [summary {"includes" []}]]
+  (let [eval-str f"(fn [v] (.pop {mod}.__dict__ v)))"
+        map-f (hy.eval (hy.read eval-str)
+                       :compiler
+                       (get-hy-builder doc-uri mod "compiler"))]
+    (->> hyuga.sym.dummy.__dict__ (.keys) tuple
+         (filter #%(not (or (and (.startswith %1 "__")
+                                 (.endswith %1 "__"))
+                            (= "hy" %1)
+                            (.startswith %1 "hyuga"))))
+         (filter #%(branch (isinstance (:includes summary) it)
+                           List (not (in %1 (:includes summary)))
+                           str False))
+         (map map-f)
+         tuple)))
 
 (defn -imported-hy-src
   [form doc-uri]
-  (logger.debug f"-imported-hy-src: trying to import {(second form)} doc-uri={doc-uri}")
   (-> f"({(first form)} {(second form)})"
       (hy.read)
       (-dummy-eval! doc-uri))
-  (logger.debug f"-imported-hy-src: imported {(second form)} doc-uri={doc-uri}")
   (let [dic (-> f"{(second form)}.__dict__"
                 hy.read (-dummy-eval! doc-uri))
         keys (.keys dic)]
     (when (and (in "hy" keys)
-               (in "__file__" keys))
+               (in "__file__" keys)
+               (re.search r".hy[c]*$" (get dic "__file__")))
       (with [file (open (get dic "__file__"))]
-        (let [fname file.name]
-          (logger.debug f"hy-source detected: try to read. filename={fname}")
-          (-> (file.read)
-              (load-src! "" f"file://{fname}" (second form))
-              tuple))
-        ))))
+        (logger.debug f"hy-source detected: try to read. filename={file.name}")
+        (-> (file.read)
+            (load-src! "" f"file://{file.name}" (second form)))))))
 
 (defn -load-macro!
   []
@@ -154,19 +156,20 @@
     ;; TODO: parse defn/defmacro args and show in docs
     ;; TODO: need fix for Hy definition(defn/defmacro/defclass): don't eval and keep hy.models
     (let [pos (get-form-pos form)
-          import? (= "import" (-> form first str))]
+          import? (= "import" (-> form first str))
+          mod-name (or prefix "hyuga.sym.dummy")]
       (when (and import?
                  (not prefix))
         (logger.debug f"import found. try to import {(second form)}")
-        ;(-cleanup-dummy-syms! (get-import-summary form))
-        ;(-cleanup-dummy-syms!)
         (-imported-hy-src form doc-uri)
         (logger.debug f"import complete. try to load {(second form)}"))
-      (-dummy-eval! form doc-uri (or prefix "hyuga.sym.dummy"))
+      (-dummy-eval! form doc-uri mod-name)
       (-load-macro!)
-      (-load-local! (or prefix "hyuga.sym.dummy") pos doc-uri)
-      ;(-cleanup-dummy-syms!)
-      )
+      (-load-local! mod-name pos doc-uri)
+      (if (and import?
+                 (not prefix))
+        (-cleanup-dummy-syms! doc-uri mod-name (get-import-summary form))
+        (-cleanup-dummy-syms! doc-uri mod-name)))
     (except [e BaseException]
             (error-trace logger.warning "-eval-and-add-sym!" e))))
 
@@ -233,4 +236,5 @@
 (defn load-hy-special!
   []
   "TODO: docs"
-  (-load! "hy-special" (-reserved.names)))
+  (-load! "hy-macro" (->> (hy-macros) (map #%(return [%1 %1]))))
+  (-load! "hy-special" (->> (hy-specials) (map #%(return [%1 %1])))))
