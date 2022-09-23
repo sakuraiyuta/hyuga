@@ -123,11 +123,11 @@
 (defn get-module-in-syms
   [sym-hy]
   "TODO: doc"
-  (as-> ($GLOBAL.get-$SYMS) it
-    (.items it)
-    (filter #%(= (-> %1 first get-sym) sym-hy) it)
-    (first it)
-    (:type (second it))))
+  (logger.debug f"get-module-in-syms: sym-hy={sym-hy}")
+  (->> ($GLOBAL.get-$SYMS)
+       .items
+       (filter #%(= sym-hy (-> %1 first get-sym)))
+       first second :type))
 
 (defn get-module-attrs
   [module-name]
