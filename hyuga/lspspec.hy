@@ -38,7 +38,6 @@
 (defn create-item
   [word symdata]
   "TODO: doc"
-  (logger.debug f"create-item symdata={symdata}")
   (let+ [{symkey "sym" docs "docs" typev "type"} symdata
          prefix-splitted (.split word ".")
          [scope full-sym] (get-scope/ns symkey)
@@ -62,6 +61,7 @@
 (defn create-completion-list
   [items [is-incomplete False]]
   "TODO: doc"
+  (logger.debug f"create-completion-list items={(count items)}")
   (CompletionList :is_incomplete is-incomplete
                   :items items))
 

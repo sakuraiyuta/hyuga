@@ -12,3 +12,11 @@
   "TODO: doc"
   (let [tb (.join "" (traceback.format_exc))]
     (logfn f"{fname}: error e={e}\n----- stacktrace -----\n{tb}\n----- stacktrace end -----")))
+
+(defn log-error
+  [fname e]
+  (error-trace logger.error fname e))
+
+(defn log-warn
+  [fname e]
+  (error-trace logger.warning fname e))
