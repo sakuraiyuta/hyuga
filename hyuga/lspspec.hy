@@ -13,10 +13,15 @@
                          Position
                          MarkupContent
                          MarkupKind])
+(import re)
 
 (import hyuga.log *)
 (import hyuga.api *)
 (import hyuga.sym.helper *)
+
+(defn fix-docs
+  [docs]
+  (.replace docs "hyuga.sym.dummy" "local"))
 
 (defn decide-kind
   [sym-type]
@@ -43,14 +48,15 @@
       (let+ [{symkey "sym" docs "docs" typev "type"} dic
              prefix-splitted (.split word ".")
              [scope full-sym] (get-scope/ns symkey)
+             fixed-scope (.replace scope "hyuga.sym.dummy" "local")
              [ns sym] (get-ns/sym full-sym)
              insert-text (if (module-or-class? prefix-splitted)
                            sym
                            sym)]
         (CompletionItem
-          :label f"{sym}\t[{scope}]\t<{full-sym}>"
+          :label f"{sym}\t[{fixed-scope}]\t<{full-sym}>"
           :insert_text insert-text
-          :detail docs
+          :detail (fix-docs docs)
           :kind (decide-kind (str typev)))))))
 
 (defn create-items
@@ -73,7 +79,7 @@
   (Hover
     :contents (MarkupContent
                 :kind MarkupKind.PlainText
-                :value docs)))
+                :value (fix-docs docs))))
 
 (defn create-location
   [pos uri]
