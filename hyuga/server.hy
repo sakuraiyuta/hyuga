@@ -94,6 +94,7 @@
                    (. source))
                $SERVER.workspace.root_uri
                params.text_document.uri
+               "hyuga.sym.dummy"
                False)
     (except [e Exception]
             (log-error "did-open" e)

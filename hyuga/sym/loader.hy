@@ -169,12 +169,7 @@
         (-imported-hy-src form root-uri doc-uri))
       (-dummy-eval! form doc-uri mod-name)
       (-load-macro! mod-name pos doc-uri)
-      (-load-local! mod-name pos doc-uri (not recur?))
-;      (if (and import?
-;                 (not prefix))
-;        (-cleanup-dummy-syms! doc-uri mod-name (get-import-summary form))
-;        (-cleanup-dummy-syms! doc-uri mod-name))
-      )
+      (-load-local! mod-name pos doc-uri (not recur?)))
     (except [e BaseException]
             (log-warn "-eval-and-add-sym!" e))))
 
@@ -198,7 +193,7 @@
           (f form))))
 
 (defn walk-eval!
-  [forms root-uri doc-uri prefix [recur? False]]
+  [forms root-uri doc-uri prefix [recur? True]]
   "TODO: doc"
   (try
     (-prewalk root-uri doc-uri prefix recur? forms)
@@ -213,10 +208,10 @@
   (-load! "sys" (->> modules .items list)))
 
 (defn load-src!
-  [src root-uri doc-uri prefix [recur? False]]
+  [src root-uri doc-uri prefix [recur? True]]
   "TODO: docs"
   (try
-    (logger.debug f"load-src!: $SYMS.count={(->> ($GLOBAL.get-$SYMS) count)} root-uri={root-uri} doc-uri={doc-uri}")
+    (logger.debug f"load-src!: $SYMS.count={(->> ($GLOBAL.get-$SYMS) count)}, root-uri={root-uri}, doc-uri={doc-uri}, recur?={recur?}")
     (let [fixed-uri (remove-uri-prefix root-uri)
           venv-lib-path f"{fixed-uri}/.venv/lib"]
       (hy.eval `(import sys))
