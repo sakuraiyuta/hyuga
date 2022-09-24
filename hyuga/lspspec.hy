@@ -21,6 +21,7 @@
 
 (defn fix-dummy
   [docs [local? True]]
+  "test"
   (if local?
     (.replace docs "hyuga.sym.dummy" "local")
     (.replace docs "hyuga.sym.dummy" "")))
@@ -52,10 +53,10 @@
              [scope full-sym] (get-scope/ns symkey)
              [ns sym] (get-ns/sym full-sym)
              insert-text (if (module-or-class? prefix-splitted)
-                           (fix-dummy full-sym False)
-                           sym)]
+                           sym
+                           (fix-dummy full-sym False))]
         (CompletionItem
-          :label f"{sym}\t[{(fix-dummy scope)}]\t<{(fix-dummy ns)}>"
+          :label f"{sym}\t[{(or (fix-dummy ns) (fix-dummy scope))}]"
           :insert_text insert-text
           :detail (fix-dummy docs)
           :kind (decide-kind (str typev)))))))
