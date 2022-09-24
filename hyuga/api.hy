@@ -12,12 +12,13 @@
 (defn parse-src!
   [src root-uri doc-uri]
   "TODO: doc"
-  (logger.debug f"parse-src! $SYMS.count={(count ($GLOBAL.get-$SYMS))}")
+  (logger.debug f"parse-src!: start. $SYMS.count={(count ($GLOBAL.get-$SYMS))}")
   (for [loader-fn [load-builtin!
                    load-hy-special!
                    (partial load-src! src root-uri doc-uri "hyuga.sym.dummy")
                    load-sys!]]
-    (loader-fn)))
+    (loader-fn)
+    (logger.debug f"parse-src!: done. $SYMS.count={(count ($GLOBAL.get-$SYMS))}")))
 
 (defn get-details
   [sym-hy]
@@ -34,17 +35,19 @@
 
 (defn get-candidates
   [prefix]
-  "Get all candidates supposed by prefix from all scopes.
-  (globals, locals, builtins, and macros)
+  r"
+  TODO: update doc
+   Get all candidates supposed by prefix from all scopes.
+   (globals, locals, builtins, and macros)
 
-  Example:
-  ```hy
-  (get-candidates \"de\")
-  => #({\"scope\" \"builtin\"
-  \"type\" <class 'builtin_function_or_method'>
-  \"sym\" \"delattr\"})
-  ```
-  "
+   Example:
+   ```hy
+   (get-candidates \"de\")
+   ; => #({\"scope\" \"builtin\"
+   ; \"type\" <class 'builtin_function_or_method'>
+   ; \"sym\" \"delattr\"})
+   ```
+   "
   (logger.debug f"get-candidates: prefix={prefix}, $SYMS.count={(count ($GLOBAL.get-$SYMS))}")
   (let [splitted (.split prefix ".")
         module-or-class (module-or-class? splitted)
@@ -52,18 +55,6 @@
                      (last splitted)
                      prefix)]
     (logger.debug f"module-or-class={module-or-class}, sym-prefix={sym-prefix}")
-;    (when module-or-class
-;      (->> (get-module-attrs module-or-class)
-;           (map #%(+ [] [(as-> splitted it
-;                           (drop-last 1 it)
-;                           (list it)
-;                           (+ it [(first %1)])
-;                           (.join "." it))
-;                         (second %1)]))
-;           (filter-add-targets module-or-class)
-;           (map #%(add-sym! %1 "module"))
-;           tuple))
-    ;;FIXME
     (->> ($GLOBAL.get-$SYMS) .items
          (filter #%(let [key (first %1)]
                      (and (.startswith (get-ns key) module-or-class)

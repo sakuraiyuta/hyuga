@@ -13,10 +13,18 @@
                          Position
                          MarkupContent
                          MarkupKind])
+(import re)
 
 (import hyuga.log *)
 (import hyuga.api *)
 (import hyuga.sym.helper *)
+
+(defn fix-dummy
+  [docs [local? True]]
+  "test"
+  (if local?
+    (.replace docs "hyuga.sym.dummy" "local")
+    (.replace docs "hyuga.sym.dummy" "")))
 
 (defn decide-kind
   [sym-type]
@@ -46,11 +54,11 @@
              [ns sym] (get-ns/sym full-sym)
              insert-text (if (module-or-class? prefix-splitted)
                            sym
-                           sym)]
+                           (fix-dummy full-sym False))]
         (CompletionItem
-          :label f"{sym}\t[{scope}]\t<{full-sym}>"
+          :label f"{sym}\t[{(or (fix-dummy ns) (fix-dummy scope))}]"
           :insert_text insert-text
-          :detail docs
+          :detail (fix-dummy docs)
           :kind (decide-kind (str typev)))))))
 
 (defn create-items
@@ -73,7 +81,7 @@
   (Hover
     :contents (MarkupContent
                 :kind MarkupKind.PlainText
-                :value docs)))
+                :value (fix-dummy docs))))
 
 (defn create-location
   [pos uri]
