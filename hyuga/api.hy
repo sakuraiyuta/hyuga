@@ -21,16 +21,18 @@
     (logger.debug f"parse-src!: done. $SYMS.count={(count ($GLOBAL.get-$SYMS))}")))
 
 (defn get-details
-  [sym-hy]
+  [sym-hy [root-uri "file:///dummy"]]
   "TODO: doc"
   (logger.debug f"get-details: sym-hy={sym-hy}")
   ;; TODO: try to get info directly if sym not found
-  (let [matches (->> ($GLOBAL.get-$SYMS) .keys tuple
-                     (filter #%(= (get-sym %1) sym-hy))
+  (let [matches (->> ($GLOBAL.get-$SYMS) .values
+                     (filter #%(= (-> (:sym %1) get-sym) sym-hy))
+                     (sorted :key #%(not (.startswith (:uri %1) root-uri)))
+                     (sorted :key #%(not (-> (:sym %1) get-scope (.startswith "hyuga.sym.dummy"))))
                      tuple)]
     (logger.debug f"get-details: matches={matches}")
     (if (> (count matches) 0)
-      (get ($GLOBAL.get-$SYMS) (first matches))
+      (get ($GLOBAL.get-$SYMS) (:sym (first matches)))
       None)))
 
 (defn get-candidates

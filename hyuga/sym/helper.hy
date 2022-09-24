@@ -25,6 +25,10 @@
   [symkey]
   (-> symkey get-scope/ns second get-ns/sym second))
 
+(defn get-scope
+  [symkey]
+  (-> symkey get-scope/ns first))
+
 (defn get-ns/sym
   [val]
   (let [splitted (.split val ".")]
@@ -129,12 +133,12 @@
             "defclass"
             (let+ [{inherits "inherits"
                     docstr "docs"} symtype]
-              f"{sym-hy} {(hy.repr inherits)}\n[{scope}] Hy defined\n\n{docstr}")
+              f"hy-class {sym-hy}\n\t{(fix-hy-symbol inherits)}\n\t[{scope}]\n\n{docstr}")
             "defn"
             (let+ [{args "args"
                     decorators "decorators"
                     docstr "docs"} symtype]
-              f"{sym-hy} {(hy.repr decorators)} {(hy.repr args)}\n[{scope}] Hy defined\n\n{docstr}")
+              f"hy-fn {sym-hy}\n\tdecorators={(fix-hy-symbol decorators)}\n\targs={(fix-hy-symbol args)}\n\t[{scope}]\n\n{docstr}")
             else f"unknown")
     (try
       (if (or (= "None" sym-hy)
@@ -289,7 +293,7 @@
       (let [option (first options)]
         (if (isinstance option List)
           (.update ret {"includes" (->> option
-                                        (walk #%(-> %1 hy.repr (.lstrip "'"))
+                                        (walk #%(-> %1 fix-hy-symbol)
                                           #%(return %1))
                                         hy.eval
                                         (filter #%(not (= ":as" %1)))

@@ -29,7 +29,6 @@
 
 (defn get-hy-builder
   [doc-uri mod key]
-  "assdfj"
   (if (in doc-uri ($compiler.keys))
     (-> (get $compiler doc-uri) (get key))
     (do
@@ -189,19 +188,19 @@
                  (or (= hytype "defn")
                      (= hytype "defclass")
                      (= hytype "setv")))
-        (add-sym! #(name summary) mod-name pos doc-uri))
+        (-load! mod-name #(#(name summary)) pos doc-uri update?))
       (when (and hytype
                  (= hytype "defclass"))
         (for [method-summary (:methods summary)]
           (let [method-name (:name method-summary)
                 cls-name name
                 method-pos (:pos method-summary)]
-            (add-sym! #(f"{cls-name}.{method-name}"
-                         method-summary)
-                      mod-name
+            (-load! mod-name
+                    #(#(f"{cls-name}.{method-name}"
+                         method-summary))
                       method-pos
-                      doc-uri))
-          ))
+                      doc-uri
+                      update?))))
 ;      (if import?
 ;        (-cleanup-dummy-syms! prefix doc-uri (get-import-summary form))
 ;        (-cleanup-dummy-syms! prefix doc-uri))
