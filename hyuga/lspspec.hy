@@ -93,6 +93,23 @@
     (Location :uri uri
               :range obj-range)))
 
+(defn distinct-locations
+  [items]
+  "TODO: doc"
+  (logger.debug f"distinct-locations: items={items}")
+  (setv ret [])
+  (for [item items]
+    (let [rng item.range
+          uri item.uri
+          not-exists? (->> ret
+                       (filter #%(and (= rng %1.range)
+                                      (= uri %1.uri)))
+                       tuple
+                       count (= 0))]
+      (when not-exists?
+        (ret.append item))))
+  ret)
+
 (defn create-location-list
   [sym/vals]
   "TODO: doc"
@@ -102,4 +119,5 @@
                 (when (and pos uri)
                   (create-location pos uri))))
        (filter #%(is-not %1 None))
+       distinct-locations
        list))

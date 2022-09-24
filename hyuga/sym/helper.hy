@@ -64,14 +64,10 @@
   (try
     (let+ [[sym-hy _] sym-hy/val
            tgt-full-sym (get-full-sym mod sym-hy)]
-      (and (not-in tgt-full-sym (->> ($GLOBAL.get-$SYMS) .keys))
-           (not-in sym-hy (->> ($GLOBAL.get-$SYMS) .keys
-                               (map get-sym) tuple))
-           (if uri
-             (not-in uri (->> ($GLOBAL.get-$SYMS) .values
-                              (map #%(get %1 "uri"))
-                              tuple))
-             True)))
+      (->> ($GLOBAL.get-$SYMS) .items
+           (filter #%(and (= (first %1) tgt-full-sym)
+                          (= (-> %1 second (get "uri")) uri)))
+           count (= 0)))
     (except [e Exception]
       (log-warn "not-in-$SYM?" e)
       (logger.warning f"mod={mod}, uri={uri}, sym-hy/val={sym-hy/val}"))))
@@ -128,16 +124,16 @@
 (defn create-docs
   [sym-hy symtype scope uri]
   "TODO: doc"
-  (if (isinstance symtype Expression)
-    (branch (= it (-> symtype first str))
+  (if (isinstance symtype dict)
+    (branch (= it (:type symtype))
             "defclass"
             (let+ [{inherits "inherits"
-                    docstr "docs"} (get-defclass-summary symtype)]
+                    docstr "docs"} symtype]
               f"{sym-hy} {(hy.repr inherits)}\n[{scope}] Hy defined\n\n{docstr}")
             "defn"
             (let+ [{args "args"
                     decorators "decorators"
-                    docstr "docs"} (get-defn-summary symtype)]
+                    docstr "docs"} symtype]
               f"{sym-hy} {(hy.repr decorators)} {(hy.repr args)}\n[{scope}] Hy defined\n\n{docstr}")
             else f"unknown")
     (try
@@ -239,6 +235,18 @@
         (.update ret {"docs" (-> (nth 3 form) str)}))))
   ret)
 
+(defn get-defclass-methods
+  [forms ret]
+  "TODO: doc"
+  (walk #%(when (isinstance %1 Expression)
+            (let [summary (get-defn-summary %1)
+                  methods (get ret "methods")]
+              (.append methods summary)
+              (.update ret {"methods" methods}))
+            %1)
+        #%(return %1)
+        forms))
+
 (defn get-defclass-summary
   [form]
   (setv ret {"name" (-> form second fix-hy-symbol)
@@ -249,16 +257,13 @@
              "methods" []
              "pos" #((getattr (second form) "start_line")
                      (getattr (second form) "start_column"))})
-  (walk #%(when (isinstance %1 Expression)
-            (let [summary (get-defn-summary %1)
-                  methods (get ret "methods")]
-              (.append methods summary)
-              (.update ret {"methods" methods}))
-            %1)
-        #%(return %1)
-        (drop 3 form))
-  (when (isinstance (nth 3 form) String)
-    (.update ret {"docs" (-> (nth 3 form) str)}))
+  (let [doc-exists? (isinstance (nth 3 form) String)
+        method-forms (if doc-exists?
+                       (drop 3 form)
+                       (drop 2 form))]
+    (when doc-exists?
+      (.update ret {"docs" (-> (nth 3 form) str)}))
+    (get-defclass-methods method-forms ret))
   ret)
 
 (defn get-setv-summary

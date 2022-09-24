@@ -157,6 +157,8 @@
 
 (defn -load-local!
   [name prefix pos uri update?]
+  "TODO: doc"
+  (logger.debug f"-load-local!: name={name}, prefix={prefix}, pos={pos}, uri={uri}, update?={update?}")
   (let [items (-> f"({prefix}.__dict__.items)"
                   (hy.read)
                   (-dummy-eval! uri prefix))
@@ -181,11 +183,25 @@
       (-dummy-eval! form doc-uri mod-name)
       (when import?
         (-load-hy-src! form root-uri doc-uri))
-      (when (and name (.startswith hytype "defmacro"))
+      (when (and hytype (= hytype "defmacro"))
         (-load-macro! name mod-name pos doc-uri update?))
-      (when (and name (or (.startswith hytype "def")
-                          (.startswith hytype "setv")))
-        (-load-local! name mod-name pos doc-uri update?))
+      (when (and hytype
+                 (or (= hytype "defn")
+                     (= hytype "defclass")
+                     (= hytype "setv")))
+        (add-sym! #(name summary) mod-name pos doc-uri))
+      (when (and hytype
+                 (= hytype "defclass"))
+        (for [method-summary (:methods summary)]
+          (let [method-name (:name method-summary)
+                cls-name name
+                method-pos (:pos method-summary)]
+            (add-sym! #(f"{cls-name}.{method-name}"
+                         method-summary)
+                      mod-name
+                      method-pos
+                      doc-uri))
+          ))
 ;      (if import?
 ;        (-cleanup-dummy-syms! prefix doc-uri (get-import-summary form))
 ;        (-cleanup-dummy-syms! prefix doc-uri))
@@ -233,19 +249,26 @@
   "TODO: docs"
   (try
     (logger.debug f"load-src!: $SYMS.count={(->> ($GLOBAL.get-$SYMS) count)}, root-uri={root-uri}, doc-uri={doc-uri}, prefix={prefix}, update?={update?}")
-    (let [fixed-uri (remove-uri-prefix root-uri)
-          venv-lib-path f"{fixed-uri}/.venv/lib"]
-      (hy.eval `(import sys))
+    (let [root-path (remove-uri-prefix root-uri)
+          venv-lib-path f"{root-path}/.venv/lib"]
+      (-dummy-eval! `(import sys)
+                    doc-uri
+                    "hyuga.sym.dummy")
       ;; add import path for poetry venv
       (when (isdir venv-lib-path)
         (logger.debug f"found venv: venv-path={venv-lib-path}")
         (let [dirname (-> venv-lib-path listdir first)
               target-path f"{venv-lib-path}/{dirname}/site-packages"]
           (logger.debug f"adding module path: target-path={target-path}")
-          (hy.eval `(when (not (= ~fixed-uri (first sys.path)))
-                      (sys.path.insert 0 ~target-path)))))
-      (hy.eval `(when (not (= ~fixed-uri (first sys.path)))
-                  (sys.path.insert 0 ~fixed-uri))))
+          (-dummy-eval! `(when (not (= ~root-path (first sys.path)))
+                           (sys.path.insert 0 ~target-path))
+                        doc-uri
+                        "hyuga.sym.dummy")))
+      ;; add import path root-uri
+      (logger.debug f"adding root-uri path: root-path={root-path}")
+      (-dummy-eval! `(when (not (= ~root-path (get sys.path 0)))
+                       (sys.path.insert 0 ~root-path))
+                    doc-uri "hyuga.sym.dummy"))
     (-dummy-eval! `(import hyuga.sym.dummy) doc-uri "hyuga.sym.dummy")
     (let [forms (hy.read-many src :filename doc-uri)]
       (->> forms (map #%(walk-eval! %1 root-uri doc-uri (fix-prefix prefix) update?)) tuple))
