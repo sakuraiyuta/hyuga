@@ -15,8 +15,8 @@
   (logger.debug f"parse-src! $SYMS.count={(count ($GLOBAL.get-$SYMS))}")
   (for [loader-fn [load-builtin!
                    load-hy-special!
-                   load-sys!
-                   (partial load-src! src root-uri doc-uri "hyuga.sym.dummy")]]
+                   (partial load-src! src root-uri doc-uri "hyuga.sym.dummy")
+                   load-sys!]]
     (loader-fn)))
 
 (defn get-details
@@ -66,12 +66,11 @@
     ;;FIXME
     (->> ($GLOBAL.get-$SYMS) .items
          (filter #%(let [key (first %1)]
-                     (or (.startswith (get-ns key) module-or-class)
-                         (.startswith (get-sym key) sym-prefix))))
+                     (and (.startswith (get-ns key) module-or-class)
+                          (.startswith (get-sym key) sym-prefix))))
          ;; exclude duplicated module name(e.g. `sys.sys`)
-         ; (filter #%(not (and module-or-class
-         ;                     (-> %1 get-ns (= module-or-class)))))
-         (map second)
+         (filter #%(not (and module-or-class
+                             (-> %1 first get-sym (= module-or-class)))))
          tuple)))
 
 (defn get-exact-matches
@@ -85,5 +84,3 @@
                    (or (= scope sym-tgt)
                        (= sym sym-tgt))))
        tuple))
-
-

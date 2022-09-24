@@ -36,26 +36,29 @@
       int))
 
 (defn create-item
-  [word symdata]
+  [word sym/dic]
   "TODO: doc"
-  (let+ [{symkey "sym" docs "docs" typev "type"} symdata
-         prefix-splitted (.split word ".")
-         [scope full-sym] (get-scope/ns symkey)
-         [ns sym] (get-ns/sym full-sym)
-         insert-text (if (module-or-class? prefix-splitted)
-                       sym
-                       sym)]
-    (CompletionItem
-      :label f"{sym}\t[{scope}]\t<{full-sym}>"
-      :insert_text insert-text
-      :detail docs
-      :kind (decide-kind (str typev)))))
+  (let [[sym dic] sym/dic]
+    (when (isinstance dic dict)
+      (let+ [{symkey "sym" docs "docs" typev "type"} dic
+             prefix-splitted (.split word ".")
+             [scope full-sym] (get-scope/ns symkey)
+             [ns sym] (get-ns/sym full-sym)
+             insert-text (if (module-or-class? prefix-splitted)
+                           sym
+                           sym)]
+        (CompletionItem
+          :label f"{sym}\t[{scope}]\t<{full-sym}>"
+          :insert_text insert-text
+          :detail docs
+          :kind (decide-kind (str typev)))))))
 
 (defn create-items
   [word]
   "TODO: doc"
   (->> (get-candidates word)
        (map #%(create-item word %1))
+       (filter #%(is-not None %1))
        list))
 
 (defn create-completion-list

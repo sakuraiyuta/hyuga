@@ -127,7 +127,6 @@
               f"{sym-hy} {(hy.repr decorators)} {(hy.repr args)}\n[{scope}] Hy defined\n\n{docstr}")
             else f"unknown")
     (try
-      (logger.debug f"-----test {symtype} {(dir symtype)}")
       (if (or (= "None" sym-hy)
               (= "hy-special" scope)
               (= "hy-macro" scope))
