@@ -23,8 +23,13 @@
 ;               "reader" HyReader}}
 (setv $compiler {})
 
+(defn fix-prefix
+  [prefix]
+  (or prefix "hyuga.sym.dummy"))
+
 (defn get-hy-builder
   [doc-uri mod key]
+  "assdfj"
   (if (in doc-uri ($compiler.keys))
     (-> (get $compiler doc-uri) (get key))
     (do
@@ -37,10 +42,10 @@
       (get-hy-builder doc-uri mod key))))
 
 (defn -load!
-  [prefix syms [pos None] [uri None] [update? False]]
+  [mod syms [pos None] [uri None] [update? False]]
   (->> syms
-       (filter-add-targets prefix update?)
-       (map #%(add-sym! %1 prefix pos uri))
+       (filter-add-targets mod uri update?)
+       (map #%(add-sym! %1 mod pos uri))
        tuple))
 
 (defn add-sym!
@@ -54,14 +59,19 @@
        "docs" docs "pos" pos})))
 
 (defn filter-add-targets
-  [prefix update? sym-py/vals]
+  [mod uri update? sym-py/vals]
   "TODO: doc"
-  (or (->> sym-py/vals
-           (map sym-py/val->sym-hy/val)
-           (filter #%(or update?
-                         (not-in-$SYM? prefix %1)))
-           (filter not-exclude-sym?))
-      #()))
+  (let [hy? #%(= (-> %1 first get-sym) "hy")
+        pyattr? #%(and (.startswith (-> %1 first get-sym) "__")
+                       (.endswith (-> %1 first get-sym) "__"))]
+    (or (->> sym-py/vals
+             (map sym-py/val->sym-hy/val)
+             (filter #%(not (or (hy? %1)
+                                (pyattr? %1))))
+             (filter #%(or update?
+                           (not-in-$SYM? mod uri %1)))
+             (filter not-exclude-sym?))
+        #())))
 
 (defn -def-or-setv?
   [form]
@@ -103,23 +113,22 @@
            :compiler (get-hy-builder doc-uri mod "compiler")))
 
 (defn -cleanup-dummy-syms!
-  [doc-uri mod [summary {"includes" []}]]
-  (let [eval-str f"(fn [v] (.pop {mod}.__dict__ v)))"
-        map-f (hy.eval (hy.read eval-str)
-                       :compiler
-                       (get-hy-builder doc-uri mod "compiler"))]
-    (->> hyuga.sym.dummy.__dict__ (.keys) tuple
-         (filter #%(not (or (and (.startswith %1 "__")
-                                 (.endswith %1 "__"))
-                            (= "hy" %1)
-                            (.startswith %1 "hyuga"))))
-         (filter #%(branch (isinstance (:includes summary) it)
-                           List (not (in %1 (:includes summary)))
-                           str False))
-         (map map-f)
-         tuple)))
+  [mod doc-uri [summary {"includes" None}]]
+  (let [dic (-> f"{mod}.__dict__" hy.read (-dummy-eval! doc-uri mod))
+        matches (->> dic (.keys) tuple
+                     (filter #%(not (or (and (.startswith %1 "__")
+                                             (.endswith %1 "__"))
+                                        (= "hy" %1)
+                                        (.startswith %1 "hyuga"))))
+                     (filter #%(branch (isinstance (:includes summary) it)
+                                       List (not (in %1 (:includes summary)))
+                                       str False
+                                       else True))
+                     tuple)]
+    (logger.debug f"-cleanup-dummy-syms!: matches={matches} summary={summary}")
+    (tuple (map dic.pop matches))))
 
-(defn -imported-hy-src
+(defn -load-hy-src!
   [form root-uri doc-uri]
   (-> f"({(first form)} {(second form)})"
       (hy.read)
@@ -129,6 +138,7 @@
         keys (.keys dic)]
     (when (and (in "hy" keys)
                (in "__file__" keys)
+               (not-in f"file://{(get dic "__file__")}" ($compiler.keys))
                (re.search r".hy[c]*$" (get dic "__file__")))
       (with [file (open (get dic "__file__"))]
         (logger.debug f"hy-source import detected: trying to read. filename={file.name}")
@@ -136,67 +146,78 @@
             (load-src! root-uri f"file://{file.name}" (second form)))))))
 
 (defn -load-macro!
-  [prefix pos uri]
-  (-load! prefix
-          (-> f"({prefix}.__macros__.items)"
-              hy.read
-              (-dummy-eval! uri prefix))
-          pos
-          uri))
+  [name prefix pos uri update?]
+  (let [items (-> f"({prefix}.__macros__.items)"
+                  (hy.read)
+                  (-dummy-eval! uri prefix))
+        matched (->> items
+                     (filter #%(= name (first %1)))
+                     tuple)]
+    (-load! prefix matched pos uri update?)))
 
 (defn -load-local!
-  [prefix pos uri update?]
-  (-load! prefix
-          (-> f"({prefix}.__dict__.items)"
-              hy.read
-              (-dummy-eval! uri prefix))
-          pos
-          uri
-          update?))
+  [name prefix pos uri update?]
+  (let [items (-> f"({prefix}.__dict__.items)"
+                  (hy.read)
+                  (-dummy-eval! uri prefix))
+        matched (->> items
+                     (filter #%(= name (first %1)))
+                     tuple)]
+    (-load! prefix matched pos uri update?)))
 
 (defn -eval-and-add-sym!
-  [form root-uri doc-uri prefix recur?]
+  [form root-uri doc-uri prefix update?]
   "TODO: docs"
   (try
     ;; TODO: parse defn/defmacro args and show in docs
     ;; TODO: need fix for Hy definition(defn/defmacro/defclass): don't eval and keep hy.models
-    (let [pos (get-form-pos form)
-          import? (= "import" (-> form first str))
-          mod-name (or prefix "hyuga.sym.dummy")]
-      (when (and import?
-                 recur?
-                 (not prefix))
-        (-imported-hy-src form root-uri doc-uri))
+    (let [summary (get-form-summary form)
+          mod-name (fix-prefix prefix)
+          pos (when summary (:pos summary))
+          import? (when summary (= "import" (:type summary)))
+          hytype (when summary (:type summary))
+          name (when summary (:name summary)) ]
+      (logger.debug f"-eval-and-add-sym!: summary={hytype}/{name}, doc-uri={doc-uri}, prefix={prefix}, update?={update?}")
       (-dummy-eval! form doc-uri mod-name)
-      (-load-macro! mod-name pos doc-uri)
-      (-load-local! mod-name pos doc-uri (not recur?)))
+      (when import?
+        (-load-hy-src! form root-uri doc-uri))
+      (when (and name (.startswith hytype "defmacro"))
+        (-load-macro! name mod-name pos doc-uri update?))
+      (when (and name (or (.startswith hytype "def")
+                          (.startswith hytype "setv")))
+        (-load-local! name mod-name pos doc-uri update?))
+;      (if import?
+;        (-cleanup-dummy-syms! prefix doc-uri (get-import-summary form))
+;        (-cleanup-dummy-syms! prefix doc-uri))
+      )
     (except [e BaseException]
             (log-warn "-eval-and-add-sym!" e))))
 
 (defn -try-eval!
-  [form root-uri doc-uri prefix recur?]
+  [form root-uri doc-uri prefix update?]
   "TODO: doc"
   (when (-eval-target? form)
-    (-eval-and-add-sym! form root-uri doc-uri prefix recur?))
+    (-eval-and-add-sym! form root-uri doc-uri prefix update?))
   form)
 
 (defn -prewalk
-  [root-uri doc-uri prefix recur? form]
+  [root-uri doc-uri prefix update? form]
   "TODO: doc"
   (let [f #%(do (-try-eval! form
                             root-uri
                             doc-uri
-                            prefix recur?)
+                            prefix
+                            update?)
                 %1)]
-    (walk (partial -prewalk root-uri doc-uri prefix recur?)
+    (walk (partial -prewalk root-uri doc-uri prefix update?)
           #%(return %1)
           (f form))))
 
 (defn walk-eval!
-  [forms root-uri doc-uri prefix [recur? True]]
+  [forms root-uri doc-uri prefix update?]
   "TODO: doc"
   (try
-    (-prewalk root-uri doc-uri prefix recur? forms)
+    (-prewalk root-uri doc-uri prefix update? forms)
     (except [e BaseException]
             (log-warn "walk-eval!" e))))
 
@@ -208,10 +229,10 @@
   (-load! "sys" (->> modules .items list)))
 
 (defn load-src!
-  [src root-uri doc-uri prefix [recur? True]]
+  [src root-uri doc-uri prefix [update? False]]
   "TODO: docs"
   (try
-    (logger.debug f"load-src!: $SYMS.count={(->> ($GLOBAL.get-$SYMS) count)}, root-uri={root-uri}, doc-uri={doc-uri}, recur?={recur?}")
+    (logger.debug f"load-src!: $SYMS.count={(->> ($GLOBAL.get-$SYMS) count)}, root-uri={root-uri}, doc-uri={doc-uri}, prefix={prefix}, update?={update?}")
     (let [fixed-uri (remove-uri-prefix root-uri)
           venv-lib-path f"{fixed-uri}/.venv/lib"]
       (hy.eval `(import sys))
@@ -226,12 +247,12 @@
       (hy.eval `(when (not (= ~fixed-uri (first sys.path)))
                   (sys.path.insert 0 ~fixed-uri))))
     (-dummy-eval! `(import hyuga.sym.dummy) doc-uri "hyuga.sym.dummy")
-    (let [forms (hy.read-many src)]
-      (->> forms (map #%(walk-eval! %1 root-uri doc-uri "" recur?)) tuple))
+    (let [forms (hy.read-many src :filename doc-uri)]
+      (->> forms (map #%(walk-eval! %1 root-uri doc-uri (fix-prefix prefix) update?)) tuple))
     (except
       [e BaseException]
       (log-warn "load-src!" e))
-    (else (logger.debug f"load-src!: done. $SYMS.count={(->> ($GLOBAL.get-$SYMS) count)}"))))
+    (else (logger.debug f"load-src!: finished. $SYMS.count={(->> ($GLOBAL.get-$SYMS) count)}, root-uri={root-uri}, doc-uri={doc-uri}, update?={update?}"))))
 
 (defn load-builtin!
   []

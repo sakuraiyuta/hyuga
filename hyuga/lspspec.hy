@@ -96,6 +96,7 @@
 (defn create-location-list
   [sym/vals]
   "TODO: doc"
+  ;; TODO: distinct location same uri and pos.
   (->> sym/vals
        (map #%(let+ [{pos "pos" uri "uri"} (second %1)]
                 (when (and pos uri)

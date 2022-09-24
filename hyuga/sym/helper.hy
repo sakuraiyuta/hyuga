@@ -9,6 +9,10 @@
 (import hyuga.log *)
 (import hyuga.global [$GLOBAL])
 
+(defn fix-hy-symbol
+  [form]
+  (-> form hy.repr (.lstrip "'")))
+
 (defn remove-uri-prefix
   [uri]
   (sub "^[a-z]+://" "" uri))
@@ -56,10 +60,21 @@
           else expect-scope))
 
 (defn not-in-$SYM?
-  [prefix sym-hy/val]
-  (let [full-sym (get-full-sym prefix (first sym-hy/val))
-        keys (.keys ($GLOBAL.get-$SYMS))]
-    (not (in full-sym keys))))
+  [mod uri sym-hy/val]
+  (try
+    (let+ [[sym-hy _] sym-hy/val
+           tgt-full-sym (get-full-sym mod sym-hy)]
+      (and (not-in tgt-full-sym (->> ($GLOBAL.get-$SYMS) .keys))
+           (not-in sym-hy (->> ($GLOBAL.get-$SYMS) .keys
+                               (map get-sym) tuple))
+           (if uri
+             (not-in uri (->> ($GLOBAL.get-$SYMS) .values
+                              (map #%(get %1 "uri"))
+                              tuple))
+             True)))
+    (except [e Exception]
+      (log-warn "not-in-$SYM?" e)
+      (logger.warning f"mod={mod}, uri={uri}, sym-hy/val={sym-hy/val}"))))
 
 (defn sym-py/val->sym-hy/val
   [sym-py/val]
@@ -201,6 +216,7 @@
 (defn get-defn-summary
   [form]
   (setv ret {"name" ""
+             "type" "defn"
              "docs" ""
              "decorators" None
              "args" ""
@@ -208,14 +224,14 @@
   (if (-> form second (isinstance List))
     (do
       (.update ret {"decorator" (second form)})
-      (.update ret {"name" (nth 2 form)})
+      (.update ret {"name" (-> form (nth 2) fix-hy-symbol)})
       (.update ret {"pos" #((getattr (nth 2 form) "start_line")
                             (getattr (nth 2 form) "start_column"))})
       (.update ret {"args" (nth 3 form)})
       (when (isinstance (nth 4 form) String)
         (.update ret {"docs" (-> (nth 4 form) str)})))
     (do
-      (.update ret {"name" (second form)})
+      (.update ret {"name" (-> form second fix-hy-symbol)})
       (.update ret {"pos" #((getattr (second form) "start_line")
                             (getattr (second form) "start_column"))})
       (.update ret {"args" (->> form (nth 2))})
@@ -225,7 +241,8 @@
 
 (defn get-defclass-summary
   [form]
-  (setv ret {"name" (-> form second str)
+  (setv ret {"name" (-> form second fix-hy-symbol)
+             "type" "defclass"
              "docs" ""
              "inherits" (nth 2 form)
              ;; TODO: implement
@@ -246,7 +263,8 @@
 
 (defn get-setv-summary
   [form]
-  {"name" (-> form second str)
+  {"name" (-> form second fix-hy-symbol)
+   "type" "setv"
    "docs" (try (hy.eval (nth 2 form))
                (except [e Exception]
                        "(can't eval)"))
@@ -255,7 +273,10 @@
 
 (defn get-import-summary
   [form]
-  (setv ret {"name" (-> form second str)
+  (setv ret {"name" (-> form second fix-hy-symbol)
+             "type" "import"
+             "pos" #((getattr (second form) "start_line")
+                     (getattr (second form) "start_column"))
              "includes" []})
   (let [options (list (drop 2 form))]
     (print (count options))
@@ -271,3 +292,36 @@
                                         tuple)})
           (.update ret {"includes" "*"})))))
   ret)
+
+(defn get-require-summary
+  [form]
+  "TODO: doc"
+  ;; TODO: implement
+  (setv ret {"name" (-> form second fix-hy-symbol)
+             "type" "require"
+             "pos" #((getattr (second form) "start_line")
+                     (getattr (second form) "start_column"))
+             "includes" []})
+  ret)
+
+(defn get-defmacro-summary
+  [form]
+  "TODO: doc"
+  ;; TODO: implement
+  (setv ret {"name" (-> form second fix-hy-symbol)
+             "type" "defmacro"
+             "pos" #((getattr (second form) "start_line")
+                     (getattr (second form) "start_column"))
+             "includes" []})
+  ret)
+
+(defn get-form-summary
+  [form]
+  (branch (= (-> form first str) it)
+          "defn" (get-defn-summary form)
+          "defclass" (get-defclass-summary form)
+          "defmacro" (get-defmacro-summary form)
+          "setv" (get-setv-summary form)
+          "import" (get-import-summary form)
+          "require" (get-require-summary form)
+          else None))

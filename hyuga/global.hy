@@ -31,12 +31,19 @@
 
   (defn get-$SYMS
     [self]
+    ;; FIXME: why suddenly added malformed symdata?(e.g. hy module)
+;    (->> self.$SYMS .values
+;         (filter #%(not (isinstance %1 dict)))
+;         (map #%(logger.warning f"xxxxxxxxx {%1}"))
+;         tuple)
     (->> self.$SYMS .keys tuple
          (filter #%(not-in "\\" %1))
-         (map #%(.pop self.$SYMS %1)))
+         (map #%(.pop self.$SYMS %1))
+         tuple)
     (->> self.$SYMS .items
          (filter #%(not (isinstance (second %1) dict)))
-         (map #%(.pop self.$SYMS (first %1))))
+         (map #%(.pop self.$SYMS (first %1)))
+         tuple)
     self.$SYMS))
 
 (setv $GLOBAL (Global))

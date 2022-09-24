@@ -71,7 +71,7 @@
 (defn [($SERVER.feature TEXT_DOCUMENT_DID_OPEN)] did-open
   [params]
   (try
-    (logger.info f"did-open: workspace={$SERVER.workspace.root_uri}")
+    (logger.info f"did-open: uri={params.text_document.uri}")
     (parse-src! (-> params.text_document.uri
                     $SERVER.workspace.get_document
                     (. source))
@@ -88,14 +88,14 @@
 (defn [($SERVER.feature TEXT_DOCUMENT_DID_CHANGE)] did-change
   [params]
   (try
-    (logger.info f"did-open: workspace={$SERVER.workspace.root_uri}")
+    (logger.info f"did-change: uri={params.text_document.uri}")
     (load-src! (-> params.text_document.uri
                    $SERVER.workspace.get_document
                    (. source))
                $SERVER.workspace.root_uri
                params.text_document.uri
                "hyuga.sym.dummy"
-               False)
+               True)
     (except [e Exception]
             (log-error "did-open" e)
             (raise e))))
