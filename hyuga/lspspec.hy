@@ -19,9 +19,11 @@
 (import hyuga.api *)
 (import hyuga.sym.helper *)
 
-(defn fix-docs
-  [docs]
-  (.replace docs "hyuga.sym.dummy" "local"))
+(defn fix-dummy
+  [docs [local? True]]
+  (if local?
+    (.replace docs "hyuga.sym.dummy" "local")
+    (.replace docs "hyuga.sym.dummy" "")))
 
 (defn decide-kind
   [sym-type]
@@ -48,15 +50,14 @@
       (let+ [{symkey "sym" docs "docs" typev "type"} dic
              prefix-splitted (.split word ".")
              [scope full-sym] (get-scope/ns symkey)
-             fixed-scope (.replace scope "hyuga.sym.dummy" "local")
              [ns sym] (get-ns/sym full-sym)
              insert-text (if (module-or-class? prefix-splitted)
-                           sym
+                           (fix-dummy full-sym False)
                            sym)]
         (CompletionItem
-          :label f"{sym}\t[{fixed-scope}]\t<{full-sym}>"
+          :label f"{sym}\t[{(fix-dummy scope)}]\t<{(fix-dummy ns)}>"
           :insert_text insert-text
-          :detail (fix-docs docs)
+          :detail (fix-dummy docs)
           :kind (decide-kind (str typev)))))))
 
 (defn create-items
@@ -79,7 +80,7 @@
   (Hover
     :contents (MarkupContent
                 :kind MarkupKind.PlainText
-                :value (fix-docs docs))))
+                :value (fix-dummy docs))))
 
 (defn create-location
   [pos uri]
