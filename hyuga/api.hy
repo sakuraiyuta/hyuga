@@ -12,12 +12,13 @@
 (defn parse-src!
   [src root-uri doc-uri]
   "TODO: doc"
-  (logger.debug f"parse-src! $SYMS.count={(count ($GLOBAL.get-$SYMS))}")
+  (logger.debug f"parse-src!: start. $SYMS.count={(count ($GLOBAL.get-$SYMS))}")
   (for [loader-fn [load-builtin!
                    load-hy-special!
                    (partial load-src! src root-uri doc-uri "hyuga.sym.dummy")
                    load-sys!]]
-    (loader-fn)))
+    (loader-fn)
+    (logger.debug f"parse-src!: done. $SYMS.count={(count ($GLOBAL.get-$SYMS))}")))
 
 (defn get-details
   [sym-hy]

@@ -113,7 +113,6 @@
 (defn create-docs
   [sym-hy symtype scope uri]
   "TODO: doc"
-  (logger.debug f"create-docs: sym-hy={sym-hy}, scope={scope}, uri={uri}")
   (if (isinstance symtype Expression)
     (branch (= it (-> symtype first str))
             "defclass"
