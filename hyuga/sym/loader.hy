@@ -47,7 +47,7 @@
   [sym-hy/val scope [pos None] [doc-uri None]]
   "TODO: doc"
   (let [[sym-hy val] sym-hy/val
-        docs (create-docs sym-hy val scope)]
+        docs (create-docs sym-hy val scope doc-uri)]
     ($GLOBAL.add-$SYMS
       {"sym" (get-full-sym scope sym-hy) "type" val "uri" doc-uri
        "scope" (judge-scope val scope)
@@ -130,17 +130,21 @@
                (in "__file__" keys)
                (re.search r".hy[c]*$" (get dic "__file__")))
       (with [file (open (get dic "__file__"))]
-        (logger.debug f"hy-source detected: try to read. filename={file.name}")
+        (logger.debug f"hy-source import detected: trying to read. filename={file.name}")
         (-> (file.read)
             (load-src! "" f"file://{file.name}" (second form)))))))
 
 (defn -load-macro!
-  []
-  (-load! "macro" (__macros__.items)))
+  [prefix pos uri]
+  (-load! prefix
+          (-> f"({prefix}.__macros__.items)"
+              hy.read
+              (-dummy-eval! uri prefix))
+          pos
+          uri))
 
 (defn -load-local!
   [prefix pos uri]
-  (logger.debug f"-load-local! prefix={prefix} pos={pos} uri={uri}")
   (-load! prefix
           (-> f"({prefix}.__dict__.items)"
               hy.read
@@ -151,7 +155,6 @@
 (defn -eval-and-add-sym!
   [form root-uri doc-uri prefix]
   "TODO: docs"
-  (logger.debug f"-eval-and-add-sym!: ({(first form)} {(second form)}) prefix={prefix}, root-uri={root-uri}, doc-uri={doc-uri}, prefix={prefix}")
   (try
     ;; TODO: parse defn/defmacro args and show in docs
     ;; TODO: need fix for Hy definition(defn/defmacro/defclass): don't eval and keep hy.models
@@ -160,18 +163,17 @@
           mod-name (or prefix "hyuga.sym.dummy")]
       (when (and import?
                  (not prefix))
-        (logger.debug f"import found. try to import {(second form)}")
-        (-imported-hy-src form doc-uri)
-        (logger.debug f"import complete. try to load {(second form)}"))
+        (-imported-hy-src form doc-uri))
       (-dummy-eval! form doc-uri mod-name)
-      (-load-macro!)
+      (-load-macro! mod-name pos doc-uri)
       (-load-local! mod-name pos doc-uri)
-      (if (and import?
-                 (not prefix))
-        (-cleanup-dummy-syms! doc-uri mod-name (get-import-summary form))
-        (-cleanup-dummy-syms! doc-uri mod-name)))
+;      (if (and import?
+;                 (not prefix))
+;        (-cleanup-dummy-syms! doc-uri mod-name (get-import-summary form))
+;        (-cleanup-dummy-syms! doc-uri mod-name))
+      )
     (except [e BaseException]
-            (error-trace logger.warning "-eval-and-add-sym!" e))))
+            (log-warn "-eval-and-add-sym!" e))))
 
 (defn -try-eval!
   [form root-uri doc-uri prefix]
@@ -195,19 +197,20 @@
   (try
     (-prewalk root-uri doc-uri prefix forms)
     (except [e BaseException]
-            (error-trace logger.warning "walk-eval!" e))))
+            (log-warn "walk-eval!" e))))
 
 (defn load-sys!
   []
   "TODO: docs"
+  (logger.debug f"load-sys!")
   ;; TODO: toggle enable/disable to list sys.modules
-  (-load! "sys" (modules.items)))
+  (-load! "sys" (->> modules .items list)))
 
 (defn load-src!
   [src root-uri doc-uri prefix]
   "TODO: docs"
   (try
-    (logger.debug f"load-src!: started. $SYMS.count={(->> ($GLOBAL.get-$SYMS) count)} root-uri={root-uri} doc-uri={doc-uri}")
+    (logger.debug f"load-src!: $SYMS.count={(->> ($GLOBAL.get-$SYMS) count)} root-uri={root-uri} doc-uri={doc-uri}")
     (let [fixed-uri (remove-uri-prefix root-uri)
           venv-lib-path f"{fixed-uri}/.venv/lib"]
       (hy.eval `(import sys))
@@ -225,7 +228,7 @@
       (->> forms (map #%(walk-eval! %1 root-uri doc-uri "")) tuple))
     (except
       [e BaseException]
-      (error-trace logger.warning "load-src!" e))
+      (log-warn "load-src!" e))
     (else (logger.debug f"load-src!: done. $SYMS.count={(->> ($GLOBAL.get-$SYMS) count)}"))))
 
 (defn load-builtin!

@@ -31,6 +31,12 @@
 
   (defn get-$SYMS
     [self]
+    (->> self.$SYMS .keys tuple
+         (filter #%(not-in "\\" %1))
+         (map #%(.pop self.$SYMS %1)))
+    (->> self.$SYMS .items
+         (filter #%(not (isinstance (second %1) dict)))
+         (map #%(.pop self.$SYMS (first %1))))
     self.$SYMS))
 
 (setv $GLOBAL (Global))

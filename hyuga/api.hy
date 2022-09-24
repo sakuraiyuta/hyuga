@@ -15,16 +15,22 @@
   (logger.debug f"parse-src! $SYMS.count={(count ($GLOBAL.get-$SYMS))}")
   (for [loader-fn [load-builtin!
                    load-hy-special!
-                   load-sys!
-                   (partial load-src! src root-uri doc-uri "hyuga.sym.dummy")]]
+                   (partial load-src! src root-uri doc-uri "hyuga.sym.dummy")
+                   load-sys!]]
     (loader-fn)))
 
 (defn get-details
   [sym-hy]
   "TODO: doc"
-  (logger.debug f"get-details sym-hy={sym-hy}" )
+  (logger.debug f"get-details: sym-hy={sym-hy}")
   ;; TODO: try to get info directly if sym not found
-  (-> ($GLOBAL.get-$SYMS) (get sym-hy)))
+  (let [matches (->> ($GLOBAL.get-$SYMS) .keys tuple
+                     (filter #%(= (get-sym %1) sym-hy))
+                     tuple)]
+    (logger.debug f"get-details: matches={matches}")
+    (if (> (count matches) 0)
+      (get ($GLOBAL.get-$SYMS) (first matches))
+      None)))
 
 (defn get-candidates
   [prefix]
@@ -46,25 +52,25 @@
                      (last splitted)
                      prefix)]
     (logger.debug f"module-or-class={module-or-class}, sym-prefix={sym-prefix}")
-    (when module-or-class
-      (->> (get-module-attrs module-or-class)
-           (map #%(+ [] [(as-> splitted it
-                           (drop-last 1 it)
-                           (list it)
-                           (+ it [(first %1)])
-                           (.join "." it))
-                         (second %1)]))
-           (filter-add-targets module-or-class)
-           (map #%(add-sym! %1 "module"))
-           tuple))
+;    (when module-or-class
+;      (->> (get-module-attrs module-or-class)
+;           (map #%(+ [] [(as-> splitted it
+;                           (drop-last 1 it)
+;                           (list it)
+;                           (+ it [(first %1)])
+;                           (.join "." it))
+;                         (second %1)]))
+;           (filter-add-targets module-or-class)
+;           (map #%(add-sym! %1 "module"))
+;           tuple))
     ;;FIXME
     (->> ($GLOBAL.get-$SYMS) .items
-         (filter #%(.startswith (get-ns (first %1)) module-or-class))
-         (filter #%(.startswith (get-sym (first %1)) sym-prefix))
+         (filter #%(let [key (first %1)]
+                     (and (.startswith (get-ns key) module-or-class)
+                          (.startswith (get-sym key) sym-prefix))))
          ;; exclude duplicated module name(e.g. `sys.sys`)
-         ; (filter #%(not (and module-or-class
-         ;                     (-> %1 get-ns (= module-or-class)))))
-         (map second)
+         (filter #%(not (and module-or-class
+                             (-> %1 first get-sym (= module-or-class)))))
          tuple)))
 
 (defn get-exact-matches

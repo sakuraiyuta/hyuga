@@ -32,13 +32,16 @@
 
 (defn get-scope/ns
   [symkey]
-  (.split symkey "\\"))
+  (let [splitted (.split symkey "\\")]
+    (if (> (count splitted) 1)
+      splitted
+      ["" (first splitted)])))
 
 (defn get-full-sym
   [prefix sym]
   (if prefix
     (+ prefix "\\" sym)
-    sym))
+    (+ "(unknown)\\" sym)))
 
 (defn not-exclude-sym?
   [sym-hy/val]
@@ -66,33 +69,51 @@
 (defn sym-py->hy
   [sym-py]
   (->> (.split sym-py ".")
-       (map hy.unmangle)
+       (map #%(if %1 (hy.unmangle %1) %1))
        (.join ".")))
 
 (defn sym-hy->py
   [sym-hy]
-    (->> (.split sym-hy ".")
-         (map hy.mangle)
-         (.join ".")))
+  (->> (.split sym-hy ".")
+       (map #%(if %1 (hy.mangle %1) %1))
+       (.join ".")))
 
 (defn -get-macro-doc
   [sym-hy symtype]
   "Get macro documents.
   FIXME: So dirty hack!"
-  (->> sym-hy (.format
-                "(do
-                (import io)
-                (import contextlib [redirect-stdout])
-                (with [buf (io.StringIO)
-                _ (redirect-stdout buf)]
-                (doc {})
-                (buf.getvalue)))")
-       hy.read
-       (hy.eval :locals {(sym-hy->py sym-hy) symtype})))
+  (let [eval-tgt
+        `(do
+           (import io)
+           (import contextlib [redirect-stdout])
+           (with [buf (io.StringIO)
+                  _ (redirect-stdout buf)]
+             (doc ~sym-hy)
+             (buf.getvalue)))]
+    (hy.eval eval-tgt
+             :locals
+             {(sym-hy->py sym-hy) symtype})))
+
+(defn -get-help
+  [sym-hy symtype]
+  "Get macro documents.
+  FIXME: So dirty hack!"
+  (let [eval-tgt
+        `(do
+           (import io)
+           (import contextlib [redirect-stdout])
+           (with [buf (io.StringIO)
+                  _ (redirect-stdout buf)]
+             (help ~sym-hy)
+             (buf.getvalue)))]
+    (hy.eval eval-tgt
+             :locals
+             ($GLOBAL.get-$SYMS))))
 
 (defn create-docs
-  [sym-hy symtype scope]
+  [sym-hy symtype scope uri]
   "TODO: doc"
+  (logger.debug f"create-docs: sym-hy={sym-hy}, scope={scope}, uri={uri}")
   (if (isinstance symtype Expression)
     (branch (= it (-> symtype first str))
             "defclass"
@@ -106,12 +127,26 @@
               f"{sym-hy} {(hy.repr decorators)} {(hy.repr args)}\n[{scope}] Hy defined\n\n{docstr}")
             else f"unknown")
     (try
-      (let [docstr (or symtype.__doc__ "No docs.")]
-        f"{sym-hy} [{scope}]\n\t{(str symtype)}\n\n{docstr}")
+      (if (or (= "None" sym-hy)
+              (= "hy-special" scope)
+              (= "hy-macro" scope))
+        f"{sym-hy} [{scope}]\n\t{(str symtype)}\n\n{(-get-macro-doc sym-hy symtype)}"
+        (let [docstr (or symtype.__doc__ "No docs.")]
+          f"{sym-hy} [{scope}]\n\t{(str symtype)}\n\n{docstr}"))
       (except
         [e BaseException]
-        (logger.debug f"cannot read __doc__. try macro docs. e={e}")
-        f"{sym-hy} [{scope}]\n\t{(str symtype)}\n\n{(-get-macro-doc sym-hy symtype)}"))))
+        (try
+          (logger.debug f"tyring to read doc. sym-hy={sym-hy}, scope={scope}, uri={uri} e={e}")
+          f"{sym-hy} [{scope}]\n\t{(str symtype)}\n\n{(-get-macro-doc sym-hy symtype)}"
+          (except
+            [e BaseException]
+            (try
+              (logger.debug f"tyring to read help. sym-hy={sym-hy}, scope={scope}, uri={uri} e={e}")
+              f"{sym-hy} [{scope}]\n\t{(str symtype)}\n\n{(-get-help sym-hy symtype)}"
+              (except
+                [e BaseException]
+                (log-warn "create-docs" e)
+                f"{sym-hy} [{scope}]\n\t{(str symtype)}\n\n(cannot load docs.)"))))))))
 
 (defn module-or-class?
   [sym-splitted]
@@ -123,11 +158,11 @@
 (defn get-module-in-syms
   [sym-hy]
   "TODO: doc"
-  (as-> ($GLOBAL.get-$SYMS) it
-    (.items it)
-    (filter #%(= (-> %1 first get-sym) sym-hy) it)
-    (first it)
-    (:type (second it))))
+  (logger.debug f"get-module-in-syms: sym-hy={sym-hy}")
+  (->> ($GLOBAL.get-$SYMS)
+       .items
+       (filter #%(= sym-hy (-> %1 first get-sym)))
+       first second :type))
 
 (defn get-module-attrs
   [module-name]
@@ -202,8 +237,7 @@
             (let [summary (get-defn-summary %1)
                   methods (get ret "methods")]
               (.append methods summary)
-              (.update ret {"methods" methods})
-              )
+              (.update ret {"methods" methods}))
             %1)
         #%(return %1)
         (drop 3 form))
