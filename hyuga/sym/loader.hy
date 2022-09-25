@@ -8,12 +8,11 @@
 (import hy.compiler [HyASTCompiler])
 (import hy.reader [HyReader])
 
-(import os [environ listdir])
+(import os [listdir])
 (import os.path [isdir])
 (import sys [modules])
 (import re)
-(import functools [reduce partial])
-(import toolz.dicttoolz [merge])
+(import functools [partial])
 
 (import hyuga.log [logger])
 (import hyuga.sym.helper *)
@@ -60,15 +59,6 @@
       {"sym" (get-full-sym scope sym-hy) "type" val "uri" doc-uri
        "scope" scope
        "docs" docs "pos" pos})))
-
-(defn -def-or-setv?
-  [form]
-  "TODO: doc"
-  (if (isinstance form Expression)
-    (let [sym (-> form first str)]
-      (or (.startswith sym "def")
-          (.startswith sym "setv")))
-    False))
 
 (defn load-target?
   [form]
@@ -135,6 +125,16 @@
                  doc-uri
                  update?))))
 
+(defn try-eval-setv!
+  [form mod doc-uri summary]
+  (try
+    (eval-in! form doc-uri mod)
+    (except
+      [e Exception]
+      (logger.debug f"can't eval ({(first form)} {(second form)}). set temp value None.")
+      ;; TODO: replace setv form to None
+      None)))
+
 (defn analyze-form!
   [form root-uri doc-uri prefix update?]
   "TODO: docs"
@@ -143,7 +143,9 @@
            mod (fix-prefix prefix)
            {pos "pos" hytype "type" name "name"} summary]
       (logger.debug f"-eval-and-add-sym!: summary={hytype}/{name}, doc-uri={doc-uri}, prefix={prefix}, update?={update?}")
-      (when (not (= hytype "setv"))
+      (if (and hytype
+               (= hytype "setv"))
+        (try-eval-setv! form doc-uri mod summary)
         (eval-in! form doc-uri mod))
       (when (= "import" hytype)
         (load-import! form root-uri doc-uri))

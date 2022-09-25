@@ -66,14 +66,18 @@
                              (-> %1 first get-sym (= module-or-class)))))
          tuple)))
 
-(defn get-exact-matches
-  [sym-tgt]
-  (logger.debug f"get-exact-matches sym-tgt={sym-tgt}, $SYMS.count={(count ($GLOBAL.get-$SYMS))}")
-  (->> ($GLOBAL.get-$SYMS) .items
-       (filter #%(.endswith (first %1) sym-tgt))
-       ;; TODO: jump by module name(e.g. sym-tgt=hyrule.collections)
-       (filter #%(let [[scope full-sym] (get-scope/ns (first %1))
-                       [ns sym] (get-ns/sym full-sym)]
-                   (or (= scope sym-tgt)
-                       (= sym sym-tgt))))
-       tuple))
+(defn get-matches
+  [tgt-full-sym]
+  (logger.debug f"get-matches tgt-sym={tgt-full-sym}")
+  (let [[tgt-ns tgt-sym] (get-ns/sym tgt-full-sym)]
+    (->> ($GLOBAL.get-$SYMS) .items
+         ;; TODO: jump by module name(e.g. sym-tgt=hyrule.collections)
+         (filter #%(let [[loaded-scope loaded-full-sym]
+                         (get-scope/ns (first %1))
+                         [loaded-ns loaded-sym]
+                         (get-ns/sym loaded-full-sym)]
+                     (or (= loaded-scope tgt-full-sym)
+                         (and (= loaded-ns tgt-ns)
+                              (= loaded-sym tgt-sym))
+                         (= loaded-sym tgt-full-sym))))
+         tuple)))

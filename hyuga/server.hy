@@ -60,7 +60,7 @@
                                 params.position.character)]
       (logger.info f"definition: word={word}")
       (when (is-not word None)
-        (let [matches (get-exact-matches word)
+        (let [matches (get-matches word)
               locations (create-location-list matches)]
           (logger.debug f"locations={locations}")
           locations)))

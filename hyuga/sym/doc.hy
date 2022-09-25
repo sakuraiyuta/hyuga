@@ -42,21 +42,26 @@
     (branch (= it (:type symtype))
             "defclass"
             (let+ [{inherits "inherits"
-                    docstr "docs"} symtype]
-              f"hy-class {sym-hy}\n\t{(fix-hy-symbol inherits)}\n\t[{scope}]\n\n{docstr}")
+                    docs "docs"} symtype]
+              f"hy-class {sym-hy}\n\t{(fix-hy-symbol inherits)}\n\t[{scope}]\n\n{docs}")
             "defn"
             (let+ [{args "args"
                     decorators "decorators"
-                    docstr "docs"} symtype]
-              f"hy-fn {sym-hy}\n\tdecorators={(fix-hy-symbol decorators)}\n\targs={(fix-hy-symbol args)}\n\t[{scope}]\n\n{docstr}")
+                    docs "docs"} symtype]
+              f"hy-fn {sym-hy}\n\tdecorators={(fix-hy-symbol decorators)}\n\targs={(fix-hy-symbol args)}\n\t[{scope}]\n\n{docs}")
+            "setv"
+            (let+ [{args "args"
+                    value "value"
+                    docs "docs"} symtype]
+              f"variable {sym-hy}\n\t[{scope}]\n\n{docs}")
             else f"unknown")
     (try
       (if (or (= "None" sym-hy)
               (= "hy-special" scope)
               (= "hy-macro" scope))
         f"{sym-hy} [{scope}]\n\t{(str symtype)}\n\n{(-get-macro-doc sym-hy symtype)}"
-        (let [docstr (or symtype.__doc__ "No docs.")]
-          f"{sym-hy} [{scope}]\n\t{(str symtype)}\n\n{docstr}"))
+        (let [docs (or symtype.__doc__ "No docs.")]
+          f"{sym-hy} [{scope}]\n\t{(str symtype)}\n\n{docs}"))
       (except
         [e BaseException]
         (try
