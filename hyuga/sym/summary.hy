@@ -82,7 +82,7 @@
                      (getattr (second form) "start_column"))
              "includes" []})
   (let [options (list (drop 2 form))]
-    (print (count options))
+    ;; TODO: multiple import support
     (when (-> options count (> 0))
       (let [option (first options)]
         (if (isinstance option List)
@@ -92,7 +92,7 @@
                                         hy.eval
                                         (filter #%(not (= ":as" %1)))
                                         (map sym-hy->py)
-                                        tuple)})
+                                        list)})
           (.update ret {"includes" "*"})))))
   ret)
 

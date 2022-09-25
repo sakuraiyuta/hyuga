@@ -70,14 +70,14 @@
           (.startswith sym "setv")))
     False))
 
-(defn -eval-target?
+(defn load-target?
   [form]
   "TODO: doc"
   (if (isinstance form Expression)
     (let [sym (-> form first str)]
       (or (.startswith sym "require")
           (.startswith sym "import")
-          ;          (.startswith sym "defmacro")
+          (.startswith sym "setv")
           (.startswith sym "def")))
     False))
 
@@ -87,11 +87,9 @@
            :locals hyuga.sym.dummy.__dict__
            :compiler (get-hy-builder doc-uri mod "compiler")))
 
-(defn load-if-hy-src!
-  [form root-uri doc-uri]
-  (-> f"({(first form)} {(second form)})"
-      (hy.read)
-      (eval-in! doc-uri))
+(defn hy-source-imported?
+  [form doc-uri]
+  "TODO: doc"
   (let [dic (-> f"{(second form)}.__dict__"
                 hy.read (eval-in! doc-uri))
         keys (.keys dic)]
@@ -99,6 +97,16 @@
                (in "__file__" keys)
                (not-in f"file://{(get dic "__file__")}" ($compiler.keys))
                (re.search r".hy[c]*$" (get dic "__file__")))
+      dic)))
+
+(defn load-import!
+  [form root-uri doc-uri]
+  (-> f"({(first form)} {(second form)})"
+      (hy.read)
+      (eval-in! doc-uri))
+  (let [dic (hy-source-imported? form doc-uri)]
+    ;; TODO: load imported symbols if import plain python modules.
+    (when dic
       (with [file (open (get dic "__file__"))]
         (logger.debug f"hy-source import detected: trying to read. filename={file.name}")
         (-> (file.read)
@@ -114,41 +122,44 @@
                      tuple)]
     (load-sym! prefix matched pos uri update?)))
 
+(defn load-class-methods!
+  [mod name doc-uri summary update?]
+  (for [method-summary (:methods summary)]
+    (let [method-name (:name method-summary)
+          cls-name name
+          method-pos (:pos method-summary)]
+      (load-sym! mod
+                 #(#(f"{cls-name}.{method-name}"
+                      method-summary))
+                 method-pos
+                 doc-uri
+                 update?))))
+
 (defn analyze-form!
   [form root-uri doc-uri prefix update?]
   "TODO: docs"
   (try
-    ;; TODO: parse defn/defmacro args and show in docs
-    ;; TODO: need fix for Hy definition(defn/defmacro/defclass): don't eval and keep hy.models
-    (let [summary (get-form-summary form)
-          mod-name (fix-prefix prefix)
-          pos (when summary (:pos summary))
-          import? (when summary (= "import" (:type summary)))
-          hytype (when summary (:type summary))
-          name (when summary (:name summary)) ]
+    (let+ [summary (get-form-summary form)
+           mod (fix-prefix prefix)
+           {pos "pos" hytype "type" name "name"} summary]
       (logger.debug f"-eval-and-add-sym!: summary={hytype}/{name}, doc-uri={doc-uri}, prefix={prefix}, update?={update?}")
-      (eval-in! form doc-uri mod-name)
-      (when import?
-        (load-if-hy-src! form root-uri doc-uri))
+      (when (not (= hytype "setv"))
+        (eval-in! form doc-uri mod))
+      (when (= "import" hytype)
+        (load-import! form root-uri doc-uri))
       (when (and hytype (= hytype "defmacro"))
-        (load-macro! name mod-name pos doc-uri update?))
+        (load-macro! name mod pos doc-uri update?))
       (when (and hytype
                  (or (= hytype "defn")
                      (= hytype "defclass")
                      (= hytype "setv")))
-        (load-sym! mod-name #(#(name summary)) pos doc-uri update?))
+        (load-sym! mod
+                   #(#(name summary))
+                   pos doc-uri update?))
       (when (and hytype
                  (= hytype "defclass"))
-        (for [method-summary (:methods summary)]
-          (let [method-name (:name method-summary)
-                cls-name name
-                method-pos (:pos method-summary)]
-            (load-sym! mod-name
-                       #(#(f"{cls-name}.{method-name}"
-                            method-summary))
-                       method-pos
-                       doc-uri
-                       update?)))))
+        (load-class-methods! mod name doc-uri
+                             summary update?)))
     (except [e BaseException]
             (log-warn "analyze-form!" e))
     (finally form)))
@@ -156,7 +167,7 @@
 (defn prewalk-form!
   [root-uri doc-uri prefix update? form]
   "TODO: doc"
-  (let [f #%(when (-eval-target? form)
+  (let [f #%(when (load-target? form)
               (analyze-form! form
                              root-uri
                              doc-uri
@@ -179,7 +190,7 @@
   []
   "TODO: docs"
   (logger.debug f"load-sys!")
-  ;; TODO: toggle enable/disable to list sys.modules
+  ;; TODO: toggle enable/disable to list sys.modules #11
   (load-sym! "sys" (->> modules .items list)))
 
 (defn load-src!
@@ -192,13 +203,14 @@
       (eval-in! `(import sys)
                 doc-uri
                 "hyuga.sym.dummy")
-      ;; add import path for poetry venv
+      ;; add import path for venv
+      ;; TODO: user can set config #11
       (when (isdir venv-lib-path)
         (logger.debug f"found venv: venv-path={venv-lib-path}")
         (let [dirname (-> venv-lib-path listdir first)
               target-path f"{venv-lib-path}/{dirname}/site-packages"]
           (logger.debug f"adding module path: target-path={target-path}")
-          (eval-in! `(when (not (= ~root-path (first sys.path)))
+          (eval-in! `(when (not (= ~root-path (get sys.path 0)))
                        (sys.path.insert 0 ~target-path))
                     doc-uri
                     "hyuga.sym.dummy")))
@@ -223,5 +235,4 @@
 (defn load-hy-special!
   []
   "TODO: docs"
-  (load-sym! "hy-macro" (->> (hy-macros) (map #%(return [%1 %1]))))
   (load-sym! "hy-special" (->> (hy-specials) (map #%(return [%1 %1])))))

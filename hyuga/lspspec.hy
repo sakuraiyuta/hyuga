@@ -1,6 +1,7 @@
 (require hyrule * :readers *)
 (import hyrule.misc *)
 
+(import inspect *)
 (import toolz.itertoolz *)
 (import pygls.lsp.types [CompletionItem
                          CompletionList
@@ -26,21 +27,42 @@
     (.replace docs "hyuga.sym.dummy" "local")
     (.replace docs "hyuga.sym.dummy" "")))
 
+(defn decide-kind-by-hyexpr
+  [hy-expr]
+  (branch (= it (first hy-expr))
+          "defn" CompletionItemKind.Keyword
+          "defclass" CompletionItemKind.Class
+          ;; FIXME: pygls CompletionItemKind.Macro is not defined yet.
+          "defmacro" CompletionItemKind.Keyword
+          else CompletionItemKind.Variable))
+
+(defn decide-kind-by-type
+  [typev]
+  (cond
+    (isinstance typev Expression)
+    (decide-kind-by-hyexpr typev)
+    (isbuiltin typev)
+    CompletionItemKind.Keyword
+    (ismodule typev)
+    CompletionItemKind.Module
+    (isclass typev)
+    CompletionItemKind.Class
+    (ismethod typev)
+    CompletionItemKind.Method
+    (isfunction typev)
+    CompletionItemKind.Function
+    True
+    CompletionItemKind.Variable))
+
 (defn decide-kind
-  [sym-type]
-  "@see: https://docs.microsoft.com/en-us/dotnet/api/microsoft.visualstudio.languageserver.protocol.completionitemkind?view=visualstudiosdk-2022"
-  (-> (branch (in it sym-type)
-              "builtin" CompletionItemKind.Function
+  [ns typev]
+  (-> (branch (in it ns)
+              "builtin" CompletionItemKind.Keyword
+              "hy-special" CompletionItemKind.Keyword
               ;; FIXME: pygls CompletionItemKind.Macro is not defined yet.
               ; "macro" 118115
               ; "macro" CompletionItemKind.Macro
-              "hy-special" CompletionItemKind.Keyword
-              "hy-macro" CompletionItemKind.Keyword
-              "macro" CompletionItemKind.Function
-              "module" CompletionItemKind.Module
-              "function" CompletionItemKind.Function
-              "class" CompletionItemKind.Class
-              else CompletionItemKind.Variable)
+              else (decide-kind-by-type typev))
       int))
 
 (defn create-item
@@ -59,7 +81,7 @@
           :label f"{sym}\t[{(or (fix-dummy ns) (fix-dummy scope))}]"
           :insert_text insert-text
           :detail (fix-dummy docs)
-          :kind (decide-kind (str typev)))))))
+          :kind (decide-kind ns typev))))))
 
 (defn create-items
   [word]
@@ -113,7 +135,6 @@
 (defn create-location-list
   [sym/vals]
   "TODO: doc"
-  ;; TODO: distinct location same uri and pos.
   (->> sym/vals
        (map #%(let+ [{pos "pos" uri "uri"} (second %1)]
                 (when (and pos uri)
