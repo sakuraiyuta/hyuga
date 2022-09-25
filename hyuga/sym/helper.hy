@@ -31,6 +31,13 @@
        (.join "."))
      (last splitted)]))
 
+(defn get-scope/ns/sym
+  [full-sym]
+  (let [[scope full-ns] (get-scope/ns full-sym)
+        [ns sym] (get-ns/sym full-ns)]
+    [scope ns sym]))
+
+;; TODO: change name to get-scope/full-ns
 (defn get-scope/ns
   [symkey]
   (let [splitted (.split symkey "\\")]

@@ -21,14 +21,24 @@
     (logger.debug f"parse-src!: done. $SYMS.count={(count ($GLOBAL.get-$SYMS))}")))
 
 (defn get-details
-  [sym-hy [root-uri "file:///dummy"]]
+  [full-sym doc-uri]
   "TODO: doc"
-  (logger.debug f"get-details: sym-hy={sym-hy}")
+  (logger.debug f"get-details: full-sym={full-sym}")
   ;; TODO: try to get info directly if sym not found
-  (let [matches (->> ($GLOBAL.get-$SYMS) .values
-                     (filter #%(= (-> (:sym %1) get-sym) sym-hy))
-                     (sorted :key #%(not (.startswith (:uri %1) root-uri)))
-                     (sorted :key #%(not (-> (:sym %1) get-scope (.startswith "hyuga.sym.dummy"))))
+  (let [[tgt-scope tgt-ns tgt-sym] (get-scope/ns/sym full-sym)
+        filter-fn
+        #%(let [[load-scope load-ns load-sym]
+                (get-scope/ns/sym (:sym %1))]
+            (and (= tgt-sym load-sym)
+                 (= tgt-ns load-ns)))
+        matches (->> ($GLOBAL.get-$SYMS) .values list
+                     (filter filter-fn)
+                     (sorted :key #%(if (= (:uri %1) doc-uri)
+                                      1 2))
+                     (sorted :key #%(if (-> (:sym %1)
+                                            get-scope
+                                            (.startswith "hyuga.sym.dummy"))
+                                      1 2))
                      tuple)]
     (logger.debug f"get-details: matches={matches}")
     (if (> (count matches) 0)
