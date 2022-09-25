@@ -77,6 +77,12 @@
            :locals hyuga.sym.dummy.__dict__
            :compiler (get-hy-builder doc-uri mod "compiler")))
 
+(defn load-hy-src!
+  [form fname root-uri]
+  (with [file (open fname)]
+    (-> (file.read)
+        (load-src! root-uri f"file://{file.name}" (second form)))))
+
 (defn hy-source-imported?
   [form doc-uri]
   "TODO: doc"
@@ -89,18 +95,34 @@
                (re.search r".hy[c]*$" (get dic "__file__")))
       dic)))
 
+(defn load-pypkg!
+  [summary mod doc-uri update?]
+  (let+ [{name "name" pos "pos"
+          includes "includes"} summary
+         pypkg-items (-> f"{name}.__dict__"
+                         hy.read
+                         (eval-in! doc-uri mod)
+                         .items tuple)
+         filtered (if (= includes "*")
+                    pypkg-items
+                    (->> pypkg-items
+                         (filter #%(in (first %1) includes))
+                         tuple))]
+    ;; TODO: bugfix
+    (logger.debug f"tyring to load pypkg syms. name={name}")
+    (load-sym! mod filtered
+               pos doc-uri update?)))
+
 (defn load-import!
-  [form root-uri doc-uri]
+  [form summary mod root-uri doc-uri update?]
   (-> f"({(first form)} {(second form)})"
       (hy.read)
       (eval-in! doc-uri))
   (let [dic (hy-source-imported? form doc-uri)]
-    ;; TODO: load imported symbols if import plain python modules.
-    (when dic
-      (with [file (open (get dic "__file__"))]
-        (logger.debug f"hy-source import detected: trying to read. filename={file.name}")
-        (-> (file.read)
-            (load-src! root-uri f"file://{file.name}" (second form)))))))
+    (if dic
+      (load-hy-src! form (get dic "__file__") root-uri)
+      ;; FIXME: need update?
+      (load-pypkg! summary mod doc-uri update?))))
 
 (defn load-macro!
   [name prefix pos uri update?]
@@ -148,7 +170,8 @@
         (try-eval-setv! form doc-uri mod summary)
         (eval-in! form doc-uri mod))
       (when (= "import" hytype)
-        (load-import! form root-uri doc-uri))
+        (load-import! form summary mod
+                      root-uri doc-uri update?))
       (when (and hytype (= hytype "defmacro"))
         (load-macro! name mod pos doc-uri update?))
       (when (and hytype
