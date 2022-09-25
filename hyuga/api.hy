@@ -26,13 +26,13 @@
   (logger.debug f"get-details: full-sym={full-sym}")
   ;; TODO: try to get info directly if sym not found
   (let [[tgt-scope tgt-ns tgt-sym] (get-scope/ns/sym full-sym)
-        filter-fn
+        eq-sym-or-ns?
         #%(let [[load-scope load-ns load-sym]
                 (get-scope/ns/sym (:sym %1))]
             (and (= tgt-sym load-sym)
                  (= tgt-ns load-ns)))
         matches (->> ($GLOBAL.get-$SYMS) .values list
-                     (filter filter-fn)
+                     (filter eq-sym-or-ns?)
                      (sorted :key #%(if (= (:uri %1) doc-uri)
                                       1 2))
                      (sorted :key #%(if (-> (:sym %1)
@@ -40,7 +40,6 @@
                                             (.startswith "hyuga.sym.dummy"))
                                       1 2))
                      tuple)]
-    (logger.debug f"get-details: matches={matches}")
     (if (> (count matches) 0)
       (get ($GLOBAL.get-$SYMS) (:sym (first matches)))
       None)))

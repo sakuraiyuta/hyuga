@@ -79,6 +79,8 @@
 
 (defn load-hy-src!
   [form fname root-uri]
+  "TODO: doc"
+  (logger.debug f"trying to load hy-source. fname={fname}")
   (with [file (open fname)]
     (-> (file.read)
         (load-src! root-uri f"file://{file.name}" (second form)))))
@@ -108,8 +110,8 @@
                     (->> pypkg-items
                          (filter #%(in (first %1) includes))
                          tuple))]
-    ;; TODO: bugfix
-    (logger.debug f"tyring to load pypkg syms. name={name}")
+    ;; TODO: check imported syms in pypkg.(candidates can't find all syms...use getattr?)
+    (logger.debug f"trying to load pypkg syms. name={name}")
     (load-sym! mod filtered
                pos doc-uri update?)))
 
@@ -240,7 +242,7 @@
                     doc-uri
                     "hyuga.sym.dummy")))
       ;; add import path root-uri
-      (logger.debug f"adding root-uri path: root-path={root-path}")
+      (logger.debug f"adding root-uri path to sys.path: root-path={root-path}")
       (eval-in! `(when (not (= ~root-path (get sys.path 0)))
                    (sys.path.insert 0 ~root-path))
                 doc-uri "hyuga.sym.dummy"))

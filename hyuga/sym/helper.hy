@@ -78,7 +78,6 @@
 (defn get-module-in-syms
   [sym-hy]
   "TODO: doc"
-  (logger.debug f"get-module-in-syms: sym-hy={sym-hy}")
   (->> ($GLOBAL.get-$SYMS)
        .items
        (filter #%(= sym-hy (-> %1 first get-sym)))

@@ -78,7 +78,7 @@
                            sym
                            (fix-dummy full-sym False))]
         (CompletionItem
-          :label f"{sym}\t[{(or (fix-dummy ns) (fix-dummy scope))}]"
+          :label f"[{(or (fix-dummy ns) (fix-dummy scope))}] {sym}"
           :insert_text insert-text
           :detail (fix-dummy docs)
           :kind (decide-kind ns typev))))))

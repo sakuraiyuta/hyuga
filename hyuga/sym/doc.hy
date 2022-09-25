@@ -38,22 +38,23 @@
 (defn create-docs
   [sym-hy symtype scope uri]
   "TODO: doc"
-  (if (isinstance symtype dict)
+  (if (and (isinstance symtype dict)
+           (in "type" (symtype.keys)))
     (branch (= it (:type symtype))
             "defclass"
             (let+ [{inherits "inherits"
                     docs "docs"} symtype]
-              f"hy-class {sym-hy}\n\t{(fix-hy-symbol inherits)}\n\t[{scope}]\n\n{docs}")
+              f"defclass {sym-hy} {(fix-hy-symbol inherits)}\n\t[{scope}]\n\n{docs}")
             "defn"
             (let+ [{args "args"
                     decorators "decorators"
                     docs "docs"} symtype]
-              f"hy-fn {sym-hy}\n\tdecorators={(fix-hy-symbol decorators)}\n\targs={(fix-hy-symbol args)}\n\t[{scope}]\n\n{docs}")
+              f"defn {sym-hy} {(fix-hy-symbol decorators)} {(fix-hy-symbol args)}\n\t[{scope}]\n\n{docs}")
             "setv"
             (let+ [{args "args"
                     value "value"
                     docs "docs"} symtype]
-              f"variable {sym-hy}\n\t[{scope}]\n\n{docs}")
+              f"setv {sym-hy}\n\t[{scope}]\n\n{docs}")
             else f"unknown")
     (try
       (if (or (= "None" sym-hy)
@@ -65,12 +66,12 @@
       (except
         [e BaseException]
         (try
-          (logger.debug f"tyring to read doc. sym-hy={sym-hy}, scope={scope}, uri={uri} e={e}")
+          (logger.debug f"trying to read doc. sym-hy={sym-hy}, scope={scope}, uri={uri} e={e}")
           f"{sym-hy} [{scope}]\n\t{(str symtype)}\n\n{(-get-macro-doc sym-hy symtype)}"
           (except
             [e BaseException]
             (try
-              (logger.debug f"tyring to read help. sym-hy={sym-hy}, scope={scope}, uri={uri} e={e}")
+              (logger.debug f"trying to read help. sym-hy={sym-hy}, scope={scope}, uri={uri} e={e}")
               f"{sym-hy} [{scope}]\n\t{(str symtype)}\n\n{(-get-help sym-hy symtype)}"
               (except
                 [e BaseException]

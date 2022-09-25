@@ -36,6 +36,7 @@
 (defn get-defclass-methods
   [forms ret]
   "TODO: doc"
+  ;; TODO: split static/object method and keep info
   (walk #%(when (isinstance %1 Expression)
             (let [summary (get-defn-summary %1)
                   methods (get ret "methods")]
@@ -47,11 +48,11 @@
 
 (defn get-defclass-summary
   [form]
+  "TODO: doc"
   (setv ret {"name" (-> form second fix-hy-symbol)
              "type" "defclass"
              "docs" ""
              "inherits" (nth 2 form)
-             ;; TODO: implement
              "methods" []
              "pos" #((getattr (second form) "start_line")
                      (getattr (second form) "start_column"))})
@@ -62,6 +63,7 @@
     (when doc-exists?
       (.update ret {"docs" (-> (nth 3 form) str)}))
     (get-defclass-methods method-forms ret))
+  ;; TODO: get properties in __init__ if exists
   ret)
 
 (defn get-setv-summary
@@ -82,7 +84,7 @@
                      (getattr (second form) "start_column"))
              "includes" []})
   (let [options (list (drop 2 form))]
-    ;; TODO: multiple import support
+    ;; TODO: multiple import support(e.g. (import a.b x.y))
     (when (-> options count (> 0))
       (let [option (first options)]
         (if (isinstance option List)
@@ -99,7 +101,7 @@
 (defn get-require-summary
   [form]
   "TODO: doc"
-  ;; TODO: implement
+  ;; TODO: implement require form parser
   (setv ret {"name" (-> form second fix-hy-symbol)
              "type" "require"
              "pos" #((getattr (second form) "start_line")
@@ -110,7 +112,7 @@
 (defn get-defmacro-summary
   [form]
   "TODO: doc"
-  ;; TODO: implement
+  ;; TODO: implement defmacro form parser
   (setv ret {"name" (-> form second fix-hy-symbol)
              "type" "defmacro"
              "pos" #((getattr (second form) "start_line")
