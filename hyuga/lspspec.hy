@@ -121,7 +121,7 @@
 (defn distinct-locations
   [items]
   "TODO: doc"
-  (logger.debug f"distinct-locations: items={items}")
+  (logger.debug f"distinct-locations: items={(tuple items)}")
   (setv ret [])
   (for [item items]
     (let [rng item.range

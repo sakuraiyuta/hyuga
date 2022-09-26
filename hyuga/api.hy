@@ -15,7 +15,7 @@
   (logger.debug f"parse-src!: start. $SYMS.count={(count ($GLOBAL.get-$SYMS))}")
   (for [loader-fn [load-builtin!
                    load-hy-special!
-                   (partial load-src! src root-uri doc-uri "hyuga.sym.dummy")
+                   (partial load-src! src root-uri doc-uri)
                    load-sys!]]
     (loader-fn)
     (logger.debug f"parse-src!: done. $SYMS.count={(count ($GLOBAL.get-$SYMS))}")))
@@ -77,6 +77,8 @@
 
 (defn get-matches
   [tgt-full-sym]
+  "TODO: doc"
+  ;; TODO: bugfix
   (logger.debug f"get-matches tgt-sym={tgt-full-sym}")
   (let [[tgt-ns tgt-sym] (get-ns/sym tgt-full-sym)]
     (->> ($GLOBAL.get-$SYMS) .items

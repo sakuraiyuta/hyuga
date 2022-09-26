@@ -9,9 +9,10 @@
 (import hy.reader [HyReader])
 
 (import os [listdir])
-(import os.path [isdir])
+(import os.path [isdir dirname])
 (import sys [modules])
 (import re)
+(import inspect [getmodulename])
 (import functools [partial])
 
 (import hyuga.log [logger])
@@ -27,8 +28,17 @@
 (setv $compiler {})
 
 (defn fix-prefix
-  [prefix]
-  (or prefix "hyuga.sym.dummy"))
+  [root-uri doc-uri prefix]
+  (let [submod (getmodulename doc-uri)]
+    (or prefix
+        (and doc-uri
+             (-> doc-uri
+                 (.replace root-uri "")
+                 (.lstrip "/")
+                 dirname
+                 (.replace "/" ".")
+                 (+ f".{submod}")))
+        "hyuga.sym.dummy")))
 
 (defn get-hy-builder
   [doc-uri mod key]
@@ -164,7 +174,7 @@
   "TODO: docs"
   (try
     (let+ [summary (get-form-summary form)
-           mod (fix-prefix prefix)
+           mod (fix-prefix root-uri doc-uri prefix)
            {pos "pos" hytype "type" name "name"} summary]
       (logger.debug f"-eval-and-add-sym!: summary={hytype}/{name}, doc-uri={doc-uri}, prefix={prefix}, update?={update?}")
       (if (and hytype
@@ -195,6 +205,7 @@
   [root-uri doc-uri prefix update? form]
   "TODO: doc"
   (let [f #%(when (load-target? form)
+              ;; TODO: fix for nested defn/defclass
               (analyze-form! form
                              root-uri
                              doc-uri
@@ -221,15 +232,16 @@
   (load-sym! "sys" (->> modules .items list)))
 
 (defn load-src!
-  [src root-uri doc-uri prefix [update? False]]
+  [src root-uri doc-uri [prefix None] [update? False]]
   "TODO: docs"
   (try
     (logger.debug f"load-src!: $SYMS.count={(->> ($GLOBAL.get-$SYMS) count)}, root-uri={root-uri}, doc-uri={doc-uri}, prefix={prefix}, update?={update?}")
-    (let [root-path (remove-uri-prefix root-uri)
+    (when (not update?) ($GLOBAL.clean-$SYMS))
+    (let [mod (fix-prefix root-uri doc-uri prefix)
+          root-path (remove-uri-prefix root-uri)
           venv-lib-path f"{root-path}/.venv/lib"]
       (eval-in! `(import sys)
-                doc-uri
-                "hyuga.sym.dummy")
+                doc-uri)
       ;; add import path for venv
       ;; TODO: user can set config #11
       (when (isdir venv-lib-path)
@@ -239,16 +251,16 @@
           (logger.debug f"adding module path: target-path={target-path}")
           (eval-in! `(when (not (= ~root-path (get sys.path 0)))
                        (sys.path.insert 0 ~target-path))
-                    doc-uri
-                    "hyuga.sym.dummy")))
+                    doc-uri)))
       ;; add import path root-uri
       (logger.debug f"adding root-uri path to sys.path: root-path={root-path}")
       (eval-in! `(when (not (= ~root-path (get sys.path 0)))
                    (sys.path.insert 0 ~root-path))
-                doc-uri "hyuga.sym.dummy"))
+                doc-uri))
     (eval-in! `(import hyuga.sym.dummy) doc-uri "hyuga.sym.dummy")
-    (let [forms (hy.read-many src :filename doc-uri)]
-      (->> forms (map #%(walk-form! %1 root-uri doc-uri (fix-prefix prefix) update?)) tuple))
+    (let [mod (fix-prefix root-uri doc-uri prefix)
+          forms (hy.read-many src :filename doc-uri)]
+      (->> forms (map #%(walk-form! %1 root-uri doc-uri mod update?)) tuple))
     (except
       [e BaseException]
       (log-warn "load-src!" e))
