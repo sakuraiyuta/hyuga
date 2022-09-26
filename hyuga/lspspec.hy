@@ -27,10 +27,10 @@
     (.replace docs "hyuga.sym.dummy" "local")
     (.replace docs "hyuga.sym.dummy" "")))
 
-(defn decide-kind-by-hyexpr
-  [hy-expr]
-  (branch (= it (first hy-expr))
-          "defn" CompletionItemKind.Keyword
+(defn decide-kind-by-summary
+  [summary]
+  (branch (= it (:type summary))
+          "defn" CompletionItemKind.Function
           "defclass" CompletionItemKind.Class
           ;; FIXME: pygls CompletionItemKind.Macro is not defined yet.
           "defmacro" CompletionItemKind.Keyword
@@ -39,8 +39,9 @@
 (defn decide-kind-by-type
   [typev]
   (cond
-    (isinstance typev Expression)
-    (decide-kind-by-hyexpr typev)
+    (and (isinstance typev dict)
+         (in "type" (typev.keys)))
+    (decide-kind-by-summary typev)
     (isbuiltin typev)
     CompletionItemKind.Keyword
     (ismodule typev)
@@ -55,9 +56,11 @@
     CompletionItemKind.Variable))
 
 (defn decide-kind
-  [ns typev]
-  (-> (branch (in it ns)
-              "builtin" CompletionItemKind.Keyword
+  [scope typev]
+  "TODO: doc"
+  (logger.debug f"decide-kind ns={scope} typev={typev}")
+  (-> (branch (in it scope)
+              ; "builtin" CompletionItemKind.Keyword
               "hy-special" CompletionItemKind.Keyword
               ;; FIXME: pygls CompletionItemKind.Macro is not defined yet.
               ; "macro" 118115
@@ -70,9 +73,9 @@
   "TODO: doc"
   (let [[sym dic] sym/dic]
     (when (isinstance dic dict)
-      (let+ [{symkey "sym" docs "docs" typev "type"} dic
+      (let+ [{docs "docs" typev "type"} dic
              prefix-splitted (.split word ".")
-             [scope full-sym] (get-scope/ns symkey)
+             [scope full-sym] (get-scope/ns sym)
              [ns sym] (get-ns/sym full-sym)
              insert-text (if (module-or-class? prefix-splitted)
                            sym
@@ -81,7 +84,7 @@
           :label f"[{(or (fix-dummy ns) (fix-dummy scope))}] {sym}"
           :insert_text insert-text
           :detail (fix-dummy docs)
-          :kind (decide-kind ns typev))))))
+          :kind (decide-kind scope typev))))))
 
 (defn create-items
   [word]
