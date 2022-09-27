@@ -26,7 +26,9 @@
                             params.position.character)]
       (logger.info f"completion word={(repr word)}")
       (if (is-not word None)
-        (->> (create-items word)
+        (->> (create-items word
+                           $SERVER.workspace.root_uri
+                           params.text_document.uri)
              create-completion-list)
         (create-completion-list [])))
     (except [e Exception]
@@ -36,6 +38,7 @@
 (defn [($SERVER.feature HOVER)] hover
   [params]
   "`textDocument/hover` request handler."
+  ;; FIXME: only match in context
   (try
     (let [word (cursor-word-all $SERVER
                                 params.text_document.uri
@@ -94,7 +97,9 @@
                    (. source))
                $SERVER.workspace.root_uri
                params.text_document.uri
-               "hyuga.sym.dummy"
+               (detect-mod-by-uris
+                 $SERVER.workspace.root_uri
+                 params.text_document.uri)
                True)
     (except [e Exception]
             (log-error "did-open" e)

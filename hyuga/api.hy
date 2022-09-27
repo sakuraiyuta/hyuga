@@ -45,7 +45,7 @@
       None)))
 
 (defn get-candidates
-  [prefix]
+  [prefix root-uri doc-uri]
   r"
   TODO: update doc
    Get all candidates supposed by prefix from all scopes.
@@ -60,15 +60,18 @@
    ```
    "
   (logger.debug f"get-candidates: prefix={prefix}, $SYMS.count={(count ($GLOBAL.get-$SYMS))}")
-  (let [splitted (.split prefix ".")
+  (let [editting-mod (detect-mod-by-uris root-uri
+                                         doc-uri)
+        splitted (.split prefix ".")
         module-or-class (module-or-class? splitted)
         sym-prefix (if module-or-class
                      (last splitted)
                      prefix)]
-    (logger.debug f"module-or-class={module-or-class}, sym-prefix={sym-prefix}")
+    (logger.debug f"editting-mod={editting-mod}, module-or-class={module-or-class}, sym-prefix={sym-prefix}")
     (->> ($GLOBAL.get-$SYMS) .items
          (filter #%(let [key (first %1)]
-                     (and (.startswith (get-ns key) module-or-class)
+                     (and (= (get-scope key) editting-mod)
+                          (.startswith (get-ns key) module-or-class)
                           (.startswith (get-sym key) sym-prefix))))
          ;; exclude duplicated module name(e.g. `sys.sys`)
          (filter #%(not (and module-or-class

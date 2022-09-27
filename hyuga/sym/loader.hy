@@ -12,7 +12,6 @@
 (import os.path [isdir dirname])
 (import sys [modules])
 (import re)
-(import inspect [getmodulename])
 (import functools [partial])
 
 (import hyuga.log [logger])
@@ -26,19 +25,6 @@
 ; {"{doc-uri}" {"compiler" HyASTCompiler
 ;               "reader" HyReader}}
 (setv $compiler {})
-
-(defn fix-prefix
-  [root-uri doc-uri prefix]
-  (let [submod (getmodulename doc-uri)]
-    (or prefix
-        (and doc-uri
-             (-> doc-uri
-                 (.replace root-uri "")
-                 (.lstrip "/")
-                 dirname
-                 (.replace "/" ".")
-                 (+ f".{submod}")))
-        "hyuga.sym.dummy")))
 
 (defn get-hy-builder
   [doc-uri mod key]
@@ -161,11 +147,12 @@
 
 (defn try-eval-setv!
   [form mod doc-uri summary]
+  "TODO: doc"
   (try
     (eval-in! form doc-uri mod)
     (except
       [e Exception]
-      (logger.debug f"can't eval ({(first form)} {(second form)}). set temp value None.")
+      (log-warn f"can't eval ({(first form)} {(second form)}). set temp value None. doc-uri={doc-uri}, mod={mod}" e)
       ;; TODO: replace setv form to None
       None)))
 
@@ -174,12 +161,12 @@
   "TODO: docs"
   (try
     (let+ [summary (get-form-summary form)
-           mod (fix-prefix root-uri doc-uri prefix)
+           mod (detect-mod-by-uris root-uri doc-uri prefix)
            {pos "pos" hytype "type" name "name"} summary]
       (logger.debug f"-eval-and-add-sym!: summary={hytype}/{name}, doc-uri={doc-uri}, prefix={prefix}, update?={update?}")
       (if (and hytype
                (= hytype "setv"))
-        (try-eval-setv! form doc-uri mod summary)
+        (try-eval-setv! form mod doc-uri summary)
         (eval-in! form doc-uri mod))
       (when (= "import" hytype)
         (load-import! form summary mod
@@ -237,7 +224,7 @@
   (try
     (logger.debug f"load-src!: $SYMS.count={(->> ($GLOBAL.get-$SYMS) count)}, root-uri={root-uri}, doc-uri={doc-uri}, prefix={prefix}, update?={update?}")
     (when (not update?) ($GLOBAL.clean-$SYMS))
-    (let [mod (fix-prefix root-uri doc-uri prefix)
+    (let [mod (detect-mod-by-uris root-uri doc-uri prefix)
           root-path (remove-uri-prefix root-uri)
           venv-lib-path f"{root-path}/.venv/lib"]
       (eval-in! `(import sys)
@@ -258,7 +245,7 @@
                    (sys.path.insert 0 ~root-path))
                 doc-uri))
     (eval-in! `(import hyuga.sym.dummy) doc-uri "hyuga.sym.dummy")
-    (let [mod (fix-prefix root-uri doc-uri prefix)
+    (let [mod (detect-mod-by-uris root-uri doc-uri prefix)
           forms (hy.read-many src :filename doc-uri)]
       (->> forms (map #%(walk-form! %1 root-uri doc-uri mod update?)) tuple))
     (except

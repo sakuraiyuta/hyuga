@@ -87,9 +87,9 @@
           :kind (decide-kind scope typev))))))
 
 (defn create-items
-  [word]
+  [word root-uri doc-uri]
   "TODO: doc"
-  (->> (get-candidates word)
+  (->> (get-candidates word root-uri doc-uri)
        (map #%(create-item word %1))
        (filter #%(is-not None %1))
        list))

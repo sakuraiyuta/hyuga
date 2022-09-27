@@ -18,12 +18,12 @@
   (if (-> form second (isinstance List))
     (do
       (.update ret {"decorator" (second form)})
-      (.update ret {"name" (-> form (nth 2) fix-hy-symbol)})
+      (.update ret {"name" (->> form (nth 2) fix-hy-symbol)})
       (.update ret {"pos" #((getattr (nth 2 form) "start_line")
                             (getattr (nth 2 form) "start_column"))})
       (.update ret {"args" (nth 3 form)})
       (when (isinstance (nth 4 form) String)
-        (.update ret {"docs" (-> (nth 4 form) str)})))
+        (.update ret {"docs" (->> (nth 4 form) str)})))
     (do
       (.update ret {"name" (-> form second fix-hy-symbol)})
       (.update ret {"pos" #((getattr (second form) "start_line")
