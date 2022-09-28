@@ -108,7 +108,7 @@
                          tuple)
                     True #())]
     ;; TODO: check imported syms in pypkg.(candidates can't find all syms...use getattr?)
-    (logger.debug f"trying to load pypkg syms. name={name}, includes={includes}, filtered={filtered}, mod={mod}, doc-uri={doc-uri}, update?={update?}")
+    (logger.debug f"trying to load pypkg syms. name={name}, includes={includes}, mod={mod}, doc-uri={doc-uri}, update?={update?}")
     (load-sym! mod filtered
                pos doc-uri update?)))
 

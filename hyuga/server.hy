@@ -63,7 +63,9 @@
                                 params.position.character)]
       (logger.info f"definition: word={word}")
       (when (is-not word None)
-        (let [matches (get-matches word)
+        (let [doc-uri params.text_document.uri
+              root-uri $SERVER.workspace.root_uri
+              matches (get-matches word root-uri doc-uri)
               locations (create-location-list matches)]
           (logger.debug f"locations={locations}")
           locations)))

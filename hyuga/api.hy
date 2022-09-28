@@ -79,19 +79,22 @@
          tuple)))
 
 (defn get-matches
-  [tgt-full-sym]
+  [tgt-full-sym root-uri doc-uri]
   "TODO: doc"
   ;; TODO: bugfix
   (logger.debug f"get-matches tgt-sym={tgt-full-sym}")
-  (let [[tgt-ns tgt-sym] (get-ns/sym tgt-full-sym)]
+  (let [tgt-scope (detect-mod-by-uris root-uri doc-uri)
+        [tgt-ns tgt-sym] (get-ns/sym tgt-full-sym)
+        filter-fn
+        #%(let [[loaded-scope loaded-full-sym]
+                (get-scope/ns (first %1))
+                [loaded-ns loaded-sym]
+                (get-ns/sym loaded-full-sym)]
+            (or (= loaded-scope tgt-full-sym)
+                (and (= tgt-scope loaded-scope)
+                     (= loaded-sym tgt-sym))
+                (= loaded-sym tgt-full-sym)))]
     (->> ($GLOBAL.get-$SYMS) .items
          ;; TODO: jump by module name(e.g. sym-tgt=hyrule.collections)
-         (filter #%(let [[loaded-scope loaded-full-sym]
-                         (get-scope/ns (first %1))
-                         [loaded-ns loaded-sym]
-                         (get-ns/sym loaded-full-sym)]
-                     (or (= loaded-scope tgt-full-sym)
-                         (and (= loaded-ns tgt-ns)
-                              (= loaded-sym tgt-sym))
-                         (= loaded-sym tgt-full-sym))))
+         (filter filter-fn)
          tuple)))
