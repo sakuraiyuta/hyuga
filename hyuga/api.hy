@@ -29,8 +29,7 @@
         eq-sym-or-ns?
         #%(let [[load-scope load-ns load-sym]
                 (get-scope/ns/sym (:sym %1))]
-            (or (= tgt-sym load-sym)
-                (= tgt-ns load-ns)))
+            (= tgt-sym load-sym))
         matches (->> ($GLOBAL.get-$SYMS) .values list
                      (filter eq-sym-or-ns?)
                      (sorted :key #%(if (= (:uri %1) doc-uri)
