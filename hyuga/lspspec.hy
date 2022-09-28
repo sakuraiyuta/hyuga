@@ -77,9 +77,10 @@
              prefix-splitted (.split word ".")
              [scope full-sym] (get-scope/ns sym)
              [ns sym] (get-ns/sym full-sym)
-             insert-text (if (module-or-class? prefix-splitted)
-                           sym
-                           (fix-dummy full-sym False))]
+             word-ns (module-or-class? prefix-splitted)
+             insert-text (if word-ns
+                           f"{(.replace ns word-ns "")}{sym}"
+                           full-sym)]
         (CompletionItem
           :label f"[{(or (fix-dummy ns) (fix-dummy scope))}] {sym}"
           :insert_text insert-text

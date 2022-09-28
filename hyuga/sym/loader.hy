@@ -220,13 +220,6 @@
     (except [e BaseException]
             (log-warn "walk-form!" e))))
 
-(defn load-sys!
-  []
-  "TODO: docs"
-  (logger.debug f"load-sys!")
-  ;; TODO: toggle enable/disable to list sys.modules #11
-  (load-sym! "sys" (->> modules .items list)))
-
 (defn load-src!
   [src root-uri doc-uri [prefix None] [update? False]]
   "TODO: docs"
@@ -265,9 +258,16 @@
 (defn load-builtin!
   []
   "TODO: docs"
-  (load-sym! "builtin" (__builtins__.items)))
+  (load-sym! "(builtin)" (__builtins__.items)))
 
 (defn load-hy-special!
   []
   "TODO: docs"
-  (load-sym! "hy-special" (->> (hy-specials) (map #%(return [%1 %1])))))
+  (load-sym! "(hy-special)" (->> (hy-specials) (map #%(return [%1 %1])))))
+
+(defn load-sys!
+  []
+  "TODO: docs"
+  (logger.debug f"load-sys!")
+  ;; TODO: toggle enable/disable to list sys.modules #11
+  (load-sym! "(system)" (->> modules .items list)))

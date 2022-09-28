@@ -70,11 +70,11 @@
     (logger.debug f"editting-mod={editting-mod}, module-or-class={module-or-class}, sym-prefix={sym-prefix}")
     (->> ($GLOBAL.get-$SYMS) .items
          (filter #%(let [key (first %1)]
-                     (and (or (= (get-scope key) "builtin")
-                              (= (get-scope key) "hy-special")
-                              (= (get-scope key) "sys")
-                              (= (get-scope key) editting-mod))
-                          ; (.startswith (get-scope key) module-or-class)
+                     (and (in (get-scope key) [editting-mod
+                                               "(builtin)"
+                                               "(system)"
+                                               "(hy-special)"])
+                          (.startswith (get-ns key) module-or-class)
                           (.startswith (get-sym key) sym-prefix))))
          tuple)))
 
