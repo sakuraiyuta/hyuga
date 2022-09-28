@@ -82,10 +82,10 @@
         (load-src! root-uri f"file://{file.name}" (second form)))))
 
 (defn hy-source-imported?
-  [summary doc-uri mod]
+  [summary doc-uri]
   "TODO: doc"
   (let [dic (-> f"{(:name summary)}.__dict__"
-                hy.read (eval-in! doc-uri mod))
+                hy.read (eval-in! doc-uri "hyuga.sym.dummy"))
         keys (.keys dic)]
     (when (and (in "hy" keys)
                (in "__file__" keys)
@@ -109,8 +109,9 @@
                     True #())]
     ;; TODO: check imported syms in pypkg.(candidates can't find all syms...use getattr?)
     (logger.debug f"trying to load pypkg syms. name={name}, includes={includes}, mod={mod}, doc-uri={doc-uri}, update?={update?}")
-    (load-sym! mod filtered
-               pos doc-uri update?)))
+    (load-sym! mod filtered pos doc-uri update?)
+    ; (load-sym! name pypkg-items pos doc-uri update?)
+    ))
 
 (defn load-import!
   [form summary mod root-uri doc-uri update?]
@@ -118,18 +119,16 @@
   (logger.debug f"load-import!: name={(:name summary)}, mod={mod}, root-uri={root-uri}, doc-uri={doc-uri}, update?={update?}")
   (-> f"(import {(:name summary)})"
       (hy.read)
-      (eval-in! doc-uri mod))
-  (when (is-not (:includes summary) None)
-    (load-sym! mod
-               [#((:name summary) (-> f"{(:name summary)}"
-                                      hy.read
-                                      (eval-in! doc-uri mod)))]
-               (:pos summary) doc-uri update?))
-  (let [dic (hy-source-imported? summary doc-uri mod)]
+      (eval-in! doc-uri "hyuga.sym.dummy"))
+  (load-pypkg! summary mod doc-uri update?)
+  (load-pypkg! {"name" (:name summary)
+                "pos" None
+                "includes" "*"}
+               (:name summary)
+               doc-uri update?)
+  (let [dic (hy-source-imported? summary doc-uri)]
     (when dic
-      (load-hy-src! form (get dic "__file__") root-uri))
-    ;; FIXME: need update?
-    (load-pypkg! summary mod doc-uri update?)))
+      (load-hy-src! form (get dic "__file__") root-uri))))
 
 (defn load-macro!
   [name prefix pos uri update?]
@@ -172,7 +171,7 @@
     (let+ [summary (get-form-summary form)
            mod (detect-mod-by-uris root-uri doc-uri prefix)
            {pos "pos" hytype "type" name "name"} summary]
-      (logger.debug f"-eval-and-add-sym!: summary={hytype}/{name}, doc-uri={doc-uri}, prefix={prefix}, update?={update?}")
+      ; (logger.debug f"-eval-and-add-sym!: summary={hytype}/{name}, doc-uri={doc-uri}, prefix={prefix}, update?={update?}")
       (if (and hytype
                (= hytype "setv"))
         (try-eval-setv! form mod doc-uri summary)

@@ -78,8 +78,15 @@
              [scope full-sym] (get-scope/ns sym)
              [ns sym] (get-ns/sym full-sym)
              word-ns (module-or-class? prefix-splitted)
+             fixed-prefix (if ns
+                            (-> ns
+                                (+ ".")
+                                (.replace word-ns "")
+                                (.lstrip "."))
+                            "")
+             _ (logger.debug f"fixed-prefix={fixed-prefix}")
              insert-text (if word-ns
-                           f"{(.replace ns word-ns "")}{sym}"
+                           f"{fixed-prefix}{sym}"
                            full-sym)]
         (CompletionItem
           :label f"[{(or (fix-dummy ns) (fix-dummy scope))}] {sym}"

@@ -65,16 +65,20 @@
         module-or-class (module-or-class? splitted)
         sym-prefix (if module-or-class
                      (last splitted)
-                     prefix)]
+                     prefix)
+        filter-fn
+        #%(let [key (first %1)]
+            (and (in (get-scope key) [editting-mod
+                                      "(builtin)"
+                                      "(system)"
+                                      "(hy-special)"
+                                      module-or-class])
+                 (or (.startswith (get-ns key) module-or-class)
+                     (.startswith (get-scope key) module-or-class))
+                 (.startswith (get-sym key) sym-prefix)))]
     (logger.debug f"editting-mod={editting-mod}, module-or-class={module-or-class}, sym-prefix={sym-prefix}")
     (->> ($GLOBAL.get-$SYMS) .items
-         (filter #%(let [key (first %1)]
-                     (and (in (get-scope key) [editting-mod
-                                               "(builtin)"
-                                               "(system)"
-                                               "(hy-special)"])
-                          (.startswith (get-ns key) module-or-class)
-                          (.startswith (get-sym key) sym-prefix))))
+         (filter filter-fn)
          tuple)))
 
 (defn get-matches
@@ -85,14 +89,14 @@
   (let [tgt-scope (detect-mod-by-uris root-uri doc-uri)
         [tgt-ns tgt-sym] (get-ns/sym tgt-full-sym)
         filter-fn
-        #%(let [[loaded-scope loaded-full-sym]
+        #%(let [[loaded-scope loaded-full-ns]
                 (get-scope/ns (first %1))
                 [loaded-ns loaded-sym]
-                (get-ns/sym loaded-full-sym)]
+                (get-ns/sym loaded-full-ns)]
             (or (= loaded-scope tgt-full-sym)
                 (and (= tgt-scope loaded-scope)
                      (= loaded-sym tgt-sym))
-                (= loaded-sym tgt-full-sym)))]
+                (= loaded-sym tgt-sym)))]
     (->> ($GLOBAL.get-$SYMS) .items
          ;; TODO: jump by module name(e.g. sym-tgt=hyrule.collections)
          (filter filter-fn)
