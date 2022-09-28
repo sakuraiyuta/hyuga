@@ -82,7 +82,7 @@
              "type" "import"
              "pos" #((getattr (second form) "start_line")
                      (getattr (second form) "start_column"))
-             "includes" []})
+             "includes" None})
   (let [options (list (drop 2 form))]
     ;; TODO: multiple import support(e.g. (import a.b x.y))
     (when (-> options count (> 0))

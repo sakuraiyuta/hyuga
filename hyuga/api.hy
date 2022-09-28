@@ -23,14 +23,14 @@
 (defn get-details
   [full-sym doc-uri]
   "TODO: doc"
-  (logger.debug f"get-details: full-sym={full-sym}")
+  (logger.debug f"get-details: full-sym={full-sym} doc-uri={doc-uri}")
   ;; TODO: try to get info directly if sym not found
   (let [[tgt-scope tgt-ns tgt-sym] (get-scope/ns/sym full-sym)
         eq-sym-or-ns?
         #%(let [[load-scope load-ns load-sym]
                 (get-scope/ns/sym (:sym %1))]
-            (and (= tgt-sym load-sym)
-                 (= tgt-ns load-ns)))
+            (or (= tgt-sym load-sym)
+                (= tgt-ns load-ns)))
         matches (->> ($GLOBAL.get-$SYMS) .values list
                      (filter eq-sym-or-ns?)
                      (sorted :key #%(if (= (:uri %1) doc-uri)
@@ -70,12 +70,12 @@
     (logger.debug f"editting-mod={editting-mod}, module-or-class={module-or-class}, sym-prefix={sym-prefix}")
     (->> ($GLOBAL.get-$SYMS) .items
          (filter #%(let [key (first %1)]
-                     (and (= (get-scope key) editting-mod)
-                          (.startswith (get-ns key) module-or-class)
+                     (and (or (= (get-scope key) "builtin")
+                              (= (get-scope key) "hy-special")
+                              (= (get-scope key) "sys")
+                              (= (get-scope key) editting-mod))
+                          ; (.startswith (get-scope key) module-or-class)
                           (.startswith (get-sym key) sym-prefix))))
-         ;; exclude duplicated module name(e.g. `sys.sys`)
-         (filter #%(not (and module-or-class
-                             (-> %1 first get-sym (= module-or-class)))))
          tuple)))
 
 (defn get-matches

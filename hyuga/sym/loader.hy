@@ -82,14 +82,13 @@
         (load-src! root-uri f"file://{file.name}" (second form)))))
 
 (defn hy-source-imported?
-  [form doc-uri]
+  [summary doc-uri mod]
   "TODO: doc"
-  (let [dic (-> f"{(second form)}.__dict__"
-                hy.read (eval-in! doc-uri))
+  (let [dic (-> f"{(:name summary)}.__dict__"
+                hy.read (eval-in! doc-uri mod))
         keys (.keys dic)]
     (when (and (in "hy" keys)
                (in "__file__" keys)
-               (not-in f"file://{(get dic "__file__")}" ($compiler.keys))
                (re.search r".hy[c]*$" (get dic "__file__")))
       dic)))
 
@@ -101,26 +100,36 @@
                          hy.read
                          (eval-in! doc-uri mod)
                          .items tuple)
-         filtered (if (= includes "*")
-                    pypkg-items
+         filtered (cond
+                    (= includes "*") pypkg-items
+                    (isinstance includes list)
                     (->> pypkg-items
                          (filter #%(in (first %1) includes))
-                         tuple))]
+                         tuple)
+                    True #())]
     ;; TODO: check imported syms in pypkg.(candidates can't find all syms...use getattr?)
-    (logger.debug f"trying to load pypkg syms. name={name}")
+    (logger.debug f"trying to load pypkg syms. name={name}, includes={includes}, filtered={filtered}, mod={mod}, doc-uri={doc-uri}, update?={update?}")
     (load-sym! mod filtered
                pos doc-uri update?)))
 
 (defn load-import!
   [form summary mod root-uri doc-uri update?]
-  (-> f"({(first form)} {(second form)})"
+  "TODO: doc"
+  (logger.debug f"load-import!: name={(:name summary)}, mod={mod}, root-uri={root-uri}, doc-uri={doc-uri}, update?={update?}")
+  (-> f"(import {(:name summary)})"
       (hy.read)
-      (eval-in! doc-uri))
-  (let [dic (hy-source-imported? form doc-uri)]
-    (if dic
-      (load-hy-src! form (get dic "__file__") root-uri)
-      ;; FIXME: need update?
-      (load-pypkg! summary mod doc-uri update?))))
+      (eval-in! doc-uri mod))
+  (when (is-not (:includes summary) None)
+    (load-sym! mod
+               [#((:name summary) (-> f"{(:name summary)}"
+                                      hy.read
+                                      (eval-in! doc-uri mod)))]
+               (:pos summary) doc-uri update?))
+  (let [dic (hy-source-imported? summary doc-uri mod)]
+    (when dic
+      (load-hy-src! form (get dic "__file__") root-uri))
+    ;; FIXME: need update?
+    (load-pypkg! summary mod doc-uri update?)))
 
 (defn load-macro!
   [name prefix pos uri update?]
@@ -223,7 +232,7 @@
   "TODO: docs"
   (try
     (logger.debug f"load-src!: $SYMS.count={(->> ($GLOBAL.get-$SYMS) count)}, root-uri={root-uri}, doc-uri={doc-uri}, prefix={prefix}, update?={update?}")
-    (when (not update?) ($GLOBAL.clean-$SYMS))
+    ; (when (not update?) ($GLOBAL.clean-$SYMS))
     (let [mod (detect-mod-by-uris root-uri doc-uri prefix)
           root-path (remove-uri-prefix root-uri)
           venv-lib-path f"{root-path}/.venv/lib"]
