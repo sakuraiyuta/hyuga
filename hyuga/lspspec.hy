@@ -77,9 +77,17 @@
              prefix-splitted (.split word ".")
              [scope full-sym] (get-scope/ns sym)
              [ns sym] (get-ns/sym full-sym)
-             insert-text (if (module-or-class? prefix-splitted)
-                           sym
-                           (fix-dummy full-sym False))]
+             word-ns (module-or-class? prefix-splitted)
+             fixed-prefix (if ns
+                            (-> ns
+                                (+ ".")
+                                (.replace word-ns "")
+                                (.lstrip "."))
+                            "")
+             _ (logger.debug f"fixed-prefix={fixed-prefix}")
+             insert-text (if word-ns
+                           f"{fixed-prefix}{sym}"
+                           full-sym)]
         (CompletionItem
           :label f"[{(or (fix-dummy ns) (fix-dummy scope))}] {sym}"
           :insert_text insert-text
@@ -87,9 +95,9 @@
           :kind (decide-kind scope typev))))))
 
 (defn create-items
-  [word]
+  [word root-uri doc-uri]
   "TODO: doc"
-  (->> (get-candidates word)
+  (->> (get-candidates word root-uri doc-uri)
        (map #%(create-item word %1))
        (filter #%(is-not None %1))
        list))
@@ -121,7 +129,6 @@
 (defn distinct-locations
   [items]
   "TODO: doc"
-  (logger.debug f"distinct-locations: items={items}")
   (setv ret [])
   (for [item items]
     (let [rng item.range

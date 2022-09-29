@@ -18,12 +18,12 @@
   (if (-> form second (isinstance List))
     (do
       (.update ret {"decorator" (second form)})
-      (.update ret {"name" (-> form (nth 2) fix-hy-symbol)})
+      (.update ret {"name" (->> form (nth 2) fix-hy-symbol)})
       (.update ret {"pos" #((getattr (nth 2 form) "start_line")
                             (getattr (nth 2 form) "start_column"))})
       (.update ret {"args" (nth 3 form)})
       (when (isinstance (nth 4 form) String)
-        (.update ret {"docs" (-> (nth 4 form) str)})))
+        (.update ret {"docs" (->> (nth 4 form) str)})))
     (do
       (.update ret {"name" (-> form second fix-hy-symbol)})
       (.update ret {"pos" #((getattr (second form) "start_line")
@@ -82,7 +82,7 @@
              "type" "import"
              "pos" #((getattr (second form) "start_line")
                      (getattr (second form) "start_column"))
-             "includes" []})
+             "includes" None})
   (let [options (list (drop 2 form))]
     ;; TODO: multiple import support(e.g. (import a.b x.y))
     (when (-> options count (> 0))
@@ -120,13 +120,25 @@
              "includes" []})
   ret)
 
+(defn get-unknown-def-summary
+  [form]
+  "TODO: doc"
+  {"name" (-> form second fix-hy-symbol)
+   "type" (-> form first fix-hy-symbol)
+   "pos" #((getattr (second form) "start_line")
+           (getattr (second form) "start_column"))})
+
 (defn get-form-summary
   [form]
-  (branch (= (-> form first str) it)
-          "defn" (get-defn-summary form)
-          "defclass" (get-defclass-summary form)
-          "defmacro" (get-defmacro-summary form)
-          "setv" (get-setv-summary form)
-          "import" (get-import-summary form)
-          "require" (get-require-summary form)
-          else None))
+  (let [hytype (-> form first str)]
+    (branch (= hytype it)
+            "defn" (get-defn-summary form)
+            "defclass" (get-defclass-summary form)
+            "defmacro" (get-defmacro-summary form)
+            "setv" (get-setv-summary form)
+            "import" (get-import-summary form)
+            "require" (get-require-summary form)
+            else (cond
+                   (.startswith hytype "def")
+                   (get-unknown-def-summary form)
+                   True None))))

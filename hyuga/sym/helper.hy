@@ -1,10 +1,26 @@
 (require hyrule * :readers *)
 (import hyrule.iterables [drop-last])
 
+(import os.path [dirname])
+(import inspect [getmodulename])
 (import toolz.itertoolz *)
 
 (import hyuga.log *)
 (import hyuga.global [$GLOBAL])
+
+(defn detect-mod-by-uris
+  [root-uri doc-uri [mod None]]
+  (let [submod (getmodulename doc-uri)]
+    (or mod
+        (and doc-uri
+             (-> doc-uri
+                 (.replace root-uri "")
+                 (.lstrip "/")
+                 dirname
+                 (.replace "/" ".")
+                 (+ f".{submod}")
+                 sym-py->hy))
+        "hyuga.sym.dummy")))
 
 (defn fix-hy-symbol
   [form]

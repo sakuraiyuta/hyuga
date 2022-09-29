@@ -27,7 +27,12 @@
 
   (defn clean-$SYMS
     [self]
-    (setv self.$SYMS {}))
+    (->> (self.get-$SYMS) .keys tuple
+         (filter #%(or (not (.startswith "builtin\\" %1))
+                       (not (.startswith "sys\\" %1))
+                       (not (.startswith "hy-special\\" %1))))
+         (map #%(.pop self.$SYMS %1))
+         tuple))
 
   (defn get-$SYMS
     [self]
