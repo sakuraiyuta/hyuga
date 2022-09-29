@@ -2,9 +2,8 @@
 (require hyrule.collections [assoc])
 (import hyrule.collections [walk])
 
-(import hy.reserved [macros :as hy-macros
-                     names :as hy-specials])
-(import hy.models [Expression Keyword List])
+(import hy.reserved [names :as hy-specials])
+(import hy.models [Expression])
 (import hy.compiler [HyASTCompiler])
 (import hy.reader [HyReader])
 
@@ -165,6 +164,7 @@
                  need-import?)
         (load-import! form summary mod
                       root-uri doc-uri changed?))
+      ;; TODO: fix require loading
       (when (or (= "defreader" hytype)
                 (= "require" hytype))
         (eval-in! form doc-uri prefix)
