@@ -12,13 +12,13 @@
 (defn parse-src!
   [src root-uri doc-uri]
   "TODO: doc"
-  (logger.debug f"parse-src!: start. $SYMS.count={(count ($GLOBAL.get-$SYMS))}")
+  (logger.debug f"parse-src!: start. $SYMS.count={(count ($GLOBAL.get-$SYMS))}, root-uri={root-uri}, doc-uri={doc-uri}")
   (for [loader-fn [load-builtin!
                    load-hy-special!
                    (partial load-src! src root-uri doc-uri)
                    load-sys!]]
-    (loader-fn)
-    (logger.debug f"parse-src!: done. $SYMS.count={(count ($GLOBAL.get-$SYMS))}")))
+    (loader-fn))
+  (logger.debug f"parse-src!: finished. $SYMS.count={(count ($GLOBAL.get-$SYMS))}, root-uri={root-uri}, doc-uri={doc-uri}"))
 
 (defn get-details
   [full-sym root-uri doc-uri]
@@ -59,7 +59,7 @@
    ; \"sym\" \"delattr\"})
    ```
    "
-  (logger.debug f"get-candidates: prefix={prefix}, $SYMS.count={(count ($GLOBAL.get-$SYMS))}")
+  (logger.debug f"get-candidates: prefix={prefix}")
   (let [editting-mod (detect-mod-by-uris root-uri
                                          doc-uri)
         splitted (.split prefix ".")

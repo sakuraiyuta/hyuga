@@ -117,11 +117,12 @@
 (defn load-pymodule-syms!
   [summary doc-uri changed?]
   "TODO: doc"
-  (load-imported-pypkg! {"name" (:name summary)
-                         "pos" None
-                         "includes" "*"}
-                        (:name summary)
-                        doc-uri changed?))
+  (let+ [{name "name"} summary]
+    (load-imported-pypkg! {"name" name
+                           "pos" None
+                           "includes" "*"}
+                          name
+                          doc-uri changed?)))
 
 (defn load-import!
   [form summary mod root-uri doc-uri changed?]
@@ -133,11 +134,7 @@
   (let [dic (hy-source-imported? summary doc-uri)]
     (if dic
       (load-hy-src! form (get dic "__file__") root-uri)
-      (when (not (->> ($GLOBAL.get-$SYMS) .keys
-                      (map #%(= (:name summary)
-                                (get-scope %1)))
-                      tuple))
-        (load-pymodule-syms! summary doc-uri changed?))))
+      (load-pymodule-syms! summary doc-uri changed?)))
   (load-imported-pypkg! summary mod doc-uri changed?))
 
 (defn load-class-methods!
@@ -161,13 +158,17 @@
            mod (detect-mod-by-uris root-uri doc-uri prefix)
            {pos "pos" hytype "type" name "name"} summary]
       (logger.debug f"analyze-form!: summary={hytype}/{name}, doc-uri={doc-uri}, prefix={prefix}, changed?={changed?}")
-      (when (or (= "defreader" hytype)
-                (= "require" hytype))
-        (eval-in! form doc-uri prefix))
-      (when (and (= "import" hytype)
+      (when (= "defmacro" hytype)
+        (load-macro! name mod pos doc-uri changed?))
+      (when (and (or (= "require" hytype)
+                     (= "import" hytype))
                  need-import?)
         (load-import! form summary mod
                       root-uri doc-uri changed?))
+      (when (or (= "defreader" hytype)
+                (= "require" hytype))
+        (eval-in! form doc-uri prefix)
+        (load-required-macros! summary mod doc-uri changed?))
       (when (or (.startswith hytype "def")
                 (= hytype "setv"))
         (load-sym! mod
@@ -257,3 +258,24 @@
   (load-sym! "(system)" (->> modules .items
                              (filter #%(not (.startswith (first %1) "hyuga.")))
                              tuple)))
+
+(defn load-required-macros!
+  [summary mod doc-uri changed?]
+  "TODO: doc"
+  (let+ [{name "name" pos "pos"} summary
+         items (-> f"({name}.__macros__.items)"
+                   hy.read (eval-in! doc-uri mod))]
+    (logger.debug f"load-required-macros! mod={mod}, doc-uri={doc-uri}, changed?={changed?}")
+    (load-sym! mod items pos doc-uri changed?)))
+
+(defn load-macro!
+  [name mod pos uri changed?]
+  "TODO: doc"
+  (logger.debug f"load-macro! name={name}, mod={mod}, uri={uri}, changed?={changed?}")
+  (let [items (-> f"({mod}.__macros__.items)"
+                  (hy.read)
+                  (eval-in! uri mod))
+        matched (->> items
+                     (filter #%(= name (first %1)))
+                     tuple)]
+    (load-sym! mod matched pos uri changed?)))

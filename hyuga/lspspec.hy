@@ -58,7 +58,6 @@
 (defn decide-kind
   [scope typev]
   "TODO: doc"
-  (logger.debug f"decide-kind ns={scope} typev={typev}")
   (-> (branch (in it scope)
               ; "builtin" CompletionItemKind.Keyword
               "hy-special" CompletionItemKind.Keyword
@@ -84,7 +83,6 @@
                                 (.replace word-ns "")
                                 (.lstrip "."))
                             "")
-             _ (logger.debug f"fixed-prefix={fixed-prefix}")
              insert-text (if word-ns
                            f"{fixed-prefix}{sym}"
                            full-sym)]
