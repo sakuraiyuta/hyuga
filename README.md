@@ -35,7 +35,7 @@ Verified-working Hy version: [0.24.0](https://github.com/hylang/hy/tree/stable)
 pip3 install hyuga
 ```
 
-### [neovim(nvim)](https://github.com/neovim/neovim) + [vim-lsp](https://github.com/prabirshrestha/vim-lsp) + [vim-lsp-settings]()
+### [neovim(nvim)](https://github.com/neovim/neovim) + [vim-lsp](https://github.com/prabirshrestha/vim-lsp) + [vim-lsp-settings](https://github.com/mattn/vim-lsp-settings)
 
 **Note:** Currently `vim-lsp-settings` doesn't have installer for Hyuga.
 You can test with [my vim-lsp-settings branch](https://github.com/sakuraiyuta/vim-lsp-settings/tree/add-lang/hyuga).
