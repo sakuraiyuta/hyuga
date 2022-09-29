@@ -120,13 +120,25 @@
              "includes" []})
   ret)
 
+(defn get-unknown-def-summary
+  [form]
+  "TODO: doc"
+  {"name" (-> form second fix-hy-symbol)
+   "type" (-> form first fix-hy-symbol)
+   "pos" #((getattr (second form) "start_line")
+           (getattr (second form) "start_column"))})
+
 (defn get-form-summary
   [form]
-  (branch (= (-> form first str) it)
-          "defn" (get-defn-summary form)
-          "defclass" (get-defclass-summary form)
-          "defmacro" (get-defmacro-summary form)
-          "setv" (get-setv-summary form)
-          "import" (get-import-summary form)
-          "require" (get-require-summary form)
-          else None))
+  (let [hytype (-> form first str)]
+    (branch (= hytype it)
+            "defn" (get-defn-summary form)
+            "defclass" (get-defclass-summary form)
+            "defmacro" (get-defmacro-summary form)
+            "setv" (get-setv-summary form)
+            "import" (get-import-summary form)
+            "require" (get-require-summary form)
+            else (cond
+                   (.startswith hytype "def")
+                   (get-unknown-def-summary form)
+                   True None))))

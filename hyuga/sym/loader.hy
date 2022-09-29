@@ -28,6 +28,7 @@
 
 (defn get-hy-builder
   [doc-uri mod key]
+  "TODO: doc"
   (if (in doc-uri ($compiler.keys))
     (-> (get $compiler doc-uri) (get key))
     (do
@@ -79,7 +80,8 @@
   (logger.debug f"trying to load hy-source. fname={fname}")
   (with [file (open fname)]
     (-> (file.read)
-        (load-src! root-uri f"file://{file.name}" (second form)))))
+        (load-src! root-uri f"file://{file.name}" (second form)
+                   False False))))
 
 (defn hy-source-imported?
   [summary doc-uri]
@@ -92,8 +94,9 @@
                (re.search r".hy[c]*$" (get dic "__file__")))
       dic)))
 
-(defn load-pypkg!
+(defn load-imported-pypkg!
   [summary mod doc-uri changed?]
+  "TODO: doc"
   (let+ [{name "name" pos "pos"
           includes "includes"} summary
          pypkg-items (-> f"{name}.__dict__"
@@ -109,9 +112,16 @@
                     True #())]
     ;; TODO: check imported syms in pypkg.(candidates can't find all syms...use getattr?)
     (logger.debug f"trying to load pypkg syms. name={name}, includes={includes}, mod={mod}, doc-uri={doc-uri}, changed?={changed?}")
-    (load-sym! mod filtered pos doc-uri changed?)
-    ; (load-sym! name pypkg-items pos doc-uri changed?)
-    ))
+    (load-sym! mod filtered pos doc-uri changed?)))
+
+(defn load-pymodule-syms!
+  [summary doc-uri changed?]
+  "TODO: doc"
+  (load-imported-pypkg! {"name" (:name summary)
+                         "pos" None
+                         "includes" "*"}
+                        (:name summary)
+                        doc-uri changed?))
 
 (defn load-import!
   [form summary mod root-uri doc-uri changed?]
@@ -120,25 +130,15 @@
   (-> f"(import {(:name summary)})"
       (hy.read)
       (eval-in! doc-uri "hyuga.sym.dummy"))
-  (load-pypkg! summary mod doc-uri changed?)
-  (load-pypkg! {"name" (:name summary)
-                "pos" None
-                "includes" "*"}
-               (:name summary)
-               doc-uri changed?)
   (let [dic (hy-source-imported? summary doc-uri)]
-    (when dic
-      (load-hy-src! form (get dic "__file__") root-uri))))
-
-(defn load-macro!
-  [name prefix pos uri changed?]
-  (let [items (-> f"({prefix}.__macros__.items)"
-                  (hy.read)
-                  (eval-in! uri prefix))
-        matched (->> items
-                     (filter #%(= name (first %1)))
-                     tuple)]
-    (load-sym! prefix matched pos uri changed?)))
+    (if dic
+      (load-hy-src! form (get dic "__file__") root-uri)
+      (when (not (->> ($GLOBAL.get-$SYMS) .keys
+                      (map #%(= (:name summary)
+                                (get-scope %1)))
+                      tuple))
+        (load-pymodule-syms! summary doc-uri changed?))))
+  (load-imported-pypkg! summary mod doc-uri changed?))
 
 (defn load-class-methods!
   [mod name doc-uri summary changed?]
@@ -153,43 +153,27 @@
                  doc-uri
                  changed?))))
 
-(defn try-eval-setv!
-  [form mod doc-uri summary]
-  "TODO: doc"
-  (try
-    (eval-in! form doc-uri mod)
-    (except
-      [e Exception]
-      (log-warn f"can't eval ({(first form)} {(second form)}). set temp value None. doc-uri={doc-uri}, mod={mod}" e)
-      ;; TODO: replace setv form to None
-      None)))
-
 (defn analyze-form!
-  [form root-uri doc-uri prefix changed?]
+  [form root-uri doc-uri prefix changed? need-import?]
   "TODO: docs"
   (try
     (let+ [summary (get-form-summary form)
            mod (detect-mod-by-uris root-uri doc-uri prefix)
            {pos "pos" hytype "type" name "name"} summary]
-      ; (logger.debug f"-eval-and-add-sym!: summary={hytype}/{name}, doc-uri={doc-uri}, prefix={prefix}, changed?={changed?}")
-      (if (and hytype
-               (= hytype "setv"))
-        (try-eval-setv! form mod doc-uri summary)
-        (eval-in! form doc-uri mod))
-      (when (= "import" hytype)
+      (logger.debug f"analyze-form!: summary={hytype}/{name}, doc-uri={doc-uri}, prefix={prefix}, changed?={changed?}")
+      (when (or (= "defreader" hytype)
+                (= "require" hytype))
+        (eval-in! form doc-uri prefix))
+      (when (and (= "import" hytype)
+                 need-import?)
         (load-import! form summary mod
                       root-uri doc-uri changed?))
-      (when (and hytype (= hytype "defmacro"))
-        (load-macro! name mod pos doc-uri changed?))
-      (when (and hytype
-                 (or (= hytype "defn")
-                     (= hytype "defclass")
-                     (= hytype "setv")))
+      (when (or (.startswith hytype "def")
+                (= hytype "setv"))
         (load-sym! mod
                    #(#(name summary))
                    pos doc-uri changed?))
-      (when (and hytype
-                 (= hytype "defclass"))
+      (when (= hytype "defclass")
         (load-class-methods! mod name doc-uri
                              summary changed?)))
     (except [e BaseException]
@@ -197,7 +181,7 @@
     (finally form)))
 
 (defn prewalk-form!
-  [root-uri doc-uri prefix changed? form]
+  [root-uri doc-uri prefix changed? need-import? form]
   "TODO: doc"
   (let [f #%(when (load-target? form)
               ;; TODO: fix for nested defn/defclass
@@ -205,22 +189,24 @@
                              root-uri
                              doc-uri
                              prefix
-                             changed?)
+                             changed?
+                             need-import?)
               %1)]
-    (walk (partial prewalk-form! root-uri doc-uri prefix changed?)
+    (walk (partial prewalk-form! root-uri doc-uri prefix
+                   changed? need-import?)
           #%(return %1)
           (f form))))
 
 (defn walk-form!
-  [forms root-uri doc-uri prefix changed?]
+  [forms root-uri doc-uri prefix changed? need-import?]
   "TODO: doc"
   (try
-    (prewalk-form! root-uri doc-uri prefix changed? forms)
+    (prewalk-form! root-uri doc-uri prefix changed? need-import? forms)
     (except [e BaseException]
             (log-warn "walk-form!" e))))
 
 (defn load-src!
-  [src root-uri doc-uri [prefix None] [changed? False]]
+  [src root-uri doc-uri [prefix None] [changed? False] [need-import? True]]
   "TODO: docs"
   (try
     (logger.debug f"load-src!: $SYMS.count={(->> ($GLOBAL.get-$SYMS) count)}, root-uri={root-uri}, doc-uri={doc-uri}, prefix={prefix}, changed?={changed?}")
@@ -248,7 +234,7 @@
     (eval-in! `(import hyuga.sym.dummy) doc-uri "hyuga.sym.dummy")
     (let [mod (detect-mod-by-uris root-uri doc-uri prefix)
           forms (hy.read-many src :filename doc-uri)]
-      (->> forms (map #%(walk-form! %1 root-uri doc-uri mod changed?)) tuple))
+      (->> forms (map #%(walk-form! %1 root-uri doc-uri mod changed? need-import?)) tuple))
     (except
       [e BaseException]
       (log-warn "load-src!" e))
@@ -267,6 +253,7 @@
 (defn load-sys!
   []
   "TODO: docs"
-  (logger.debug f"load-sys!")
   ;; TODO: toggle enable/disable to list sys.modules #11
-  (load-sym! "(system)" (->> modules .items list)))
+  (load-sym! "(system)" (->> modules .items
+                             (filter #%(not (.startswith (first %1) "hyuga.")))
+                             tuple)))

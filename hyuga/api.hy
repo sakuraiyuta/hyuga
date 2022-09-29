@@ -21,11 +21,12 @@
     (logger.debug f"parse-src!: done. $SYMS.count={(count ($GLOBAL.get-$SYMS))}")))
 
 (defn get-details
-  [full-sym doc-uri]
+  [full-sym root-uri doc-uri]
   "TODO: doc"
   (logger.debug f"get-details: full-sym={full-sym} doc-uri={doc-uri}")
   ;; TODO: try to get info directly if sym not found
   (let [[tgt-scope tgt-ns tgt-sym] (get-scope/ns/sym full-sym)
+        current-mod (detect-mod-by-uris root-uri doc-uri)
         eq-sym-or-ns?
         #%(let [[load-scope load-ns load-sym]
                 (get-scope/ns/sym (:sym %1))]
@@ -34,10 +35,10 @@
                      (filter eq-sym-or-ns?)
                      (sorted :key #%(if (= (:uri %1) doc-uri)
                                       1 2))
-                     (sorted :key #%(if (-> (:sym %1)
-                                            get-scope
-                                            (.startswith "hyuga.sym.dummy"))
-                                      1 2))
+                     ; (sorted :key #%(if (-> (:sym %1)
+                     ;                        get-scope
+                     ;                        (= current-mod))
+                     ;                  1 2))
                      tuple)]
     (if (> (count matches) 0)
       (get ($GLOBAL.get-$SYMS) (:sym (first matches)))

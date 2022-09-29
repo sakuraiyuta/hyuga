@@ -46,7 +46,9 @@
                                 params.position.character)]
       (logger.info f"hover: word={word}")
       (when (is-not word None)
-        (let [details (-> word (get-details params.text_document.uri))]
+        (let [details (-> word (get-details
+                                 $SERVER.workspace.root_uri
+                                 params.text_document.uri))]
           (when details
             (create-hover (:docs details))))))
     (except
