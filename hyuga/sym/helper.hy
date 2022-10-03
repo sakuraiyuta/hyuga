@@ -8,19 +8,16 @@
 (import hyuga.log *)
 (import hyuga.global [$GLOBAL])
 
-(defn detect-mod-by-uris
-  [root-uri doc-uri [mod None]]
+(defn uri->mod
+  [root-uri doc-uri]
   (let [submod (getmodulename doc-uri)]
-    (or mod
-        (and doc-uri
-             (-> doc-uri
-                 (.replace root-uri "")
-                 (.lstrip "/")
-                 dirname
-                 (.replace "/" ".")
-                 (+ f".{submod}")
-                 sym-py->hy))
-        "hyuga.sym.dummy")))
+    (-> doc-uri
+        (.replace root-uri "")
+        (.lstrip "/")
+        dirname
+        (.replace "/" ".")
+        (+ f".{submod}")
+        sym-py->hy)))
 
 (defn fix-hy-symbol
   [form]

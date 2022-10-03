@@ -1,7 +1,7 @@
 (import re)
 
 ;; TODO: get config from server params
-(setv re-word-str r"[\.\?\-\w\!\>\<\$\/]+")
+(setv re-word-str r"[\+\.\?\-\w\!\>\<\$\/]+")
 
 (defn cursor-line
   [$SERVER uri ln]

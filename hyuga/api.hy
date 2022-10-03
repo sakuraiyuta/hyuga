@@ -26,7 +26,7 @@
   (logger.debug f"get-details: full-sym={full-sym} doc-uri={doc-uri}")
   ;; TODO: try to get info directly if sym not found
   (let [[tgt-scope tgt-ns tgt-sym] (get-scope/ns/sym full-sym)
-        current-mod (detect-mod-by-uris root-uri doc-uri)
+        current-mod (uri->mod root-uri doc-uri)
         eq-sym-or-ns?
         #%(let [[load-scope load-ns load-sym]
                 (get-scope/ns/sym (:sym %1))]
@@ -60,8 +60,7 @@
    ```
    "
   (logger.debug f"get-candidates: prefix={prefix}")
-  (let [editting-mod (detect-mod-by-uris root-uri
-                                         doc-uri)
+  (let [editting-mod (uri->mod root-uri doc-uri)
         splitted (.split prefix ".")
         module-or-class (module-or-class? splitted)
         sym-prefix (if module-or-class
@@ -87,7 +86,7 @@
   "TODO: doc"
   ;; TODO: bugfix
   (logger.debug f"get-matches tgt-sym={tgt-full-sym}")
-  (let [tgt-scope (detect-mod-by-uris root-uri doc-uri)
+  (let [tgt-scope (uri->mod root-uri doc-uri)
         [tgt-ns tgt-sym] (get-ns/sym tgt-full-sym)
         filter-fn
         #%(let [[loaded-scope loaded-full-ns]

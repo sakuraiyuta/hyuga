@@ -101,7 +101,7 @@
                    (. source))
                $SERVER.workspace.root_uri
                params.text_document.uri
-               (detect-mod-by-uris
+               (uri->mod
                  $SERVER.workspace.root_uri
                  params.text_document.uri)
                True)

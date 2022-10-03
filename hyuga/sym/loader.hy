@@ -82,7 +82,7 @@
         (load-src! root-uri f"file://{file.name}" (second form)
                    False False))))
 
-(defn hy-source-imported?
+(defn hy-src?
   [summary doc-uri]
   "TODO: doc"
   (let [dic (-> f"{(:name summary)}.__dict__"
@@ -130,7 +130,7 @@
   (-> f"(import {(:name summary)})"
       (hy.read)
       (eval-in! doc-uri "hyuga.sym.dummy"))
-  (let [dic (hy-source-imported? summary doc-uri)]
+  (let [dic (hy-src? summary doc-uri)]
     (if dic
       (load-hy-src! form (get dic "__file__") root-uri)
       (load-pymodule-syms! summary doc-uri changed?)))
@@ -150,13 +150,13 @@
                  changed?))))
 
 (defn analyze-form!
-  [form root-uri doc-uri prefix changed? need-import?]
+  [form root-uri doc-uri mod changed? need-import?]
   "TODO: docs"
   (try
     (let+ [summary (get-form-summary form)
-           mod (detect-mod-by-uris root-uri doc-uri prefix)
+           mod (or mod (uri->mod root-uri doc-uri))
            {pos "pos" hytype "type" name "name"} summary]
-      (logger.debug f"analyze-form!: summary={hytype}/{name}, doc-uri={doc-uri}, prefix={prefix}, changed?={changed?}")
+      (logger.debug f"analyze-form!: summary={hytype}/{name}, doc-uri={doc-uri}, mod={mod}, changed?={changed?}")
       (when (= "defmacro" hytype)
         (load-macro! name mod pos doc-uri changed?))
       (when (and (or (= "require" hytype)
@@ -167,7 +167,7 @@
       ;; TODO: fix require loading
       (when (or (= "defreader" hytype)
                 (= "require" hytype))
-        (eval-in! form doc-uri prefix)
+        (eval-in! form doc-uri mod)
         (load-required-macros! summary mod doc-uri changed?))
       (when (or (.startswith hytype "def")
                 (= hytype "setv"))
@@ -182,60 +182,64 @@
     (finally form)))
 
 (defn prewalk-form!
-  [root-uri doc-uri prefix changed? need-import? form]
+  [root-uri doc-uri mod changed? need-import? form]
   "TODO: doc"
   (let [f #%(when (load-target? form)
               ;; TODO: fix for nested defn/defclass
               (analyze-form! form
                              root-uri
                              doc-uri
-                             prefix
+                             mod
                              changed?
                              need-import?)
               %1)]
-    (walk (partial prewalk-form! root-uri doc-uri prefix
+    (walk (partial prewalk-form! root-uri doc-uri mod
                    changed? need-import?)
           #%(return %1)
           (f form))))
 
 (defn walk-form!
-  [forms root-uri doc-uri prefix changed? need-import?]
+  [forms root-uri doc-uri mod changed? need-import?]
   "TODO: doc"
   (try
-    (prewalk-form! root-uri doc-uri prefix changed? need-import? forms)
+    (prewalk-form! root-uri doc-uri mod changed? need-import? forms)
     (except [e BaseException]
             (log-warn "walk-form!" e))))
 
+(defn added-import-path?
+  [root-path]
+  (eval-in! `(not (= ~root-path (get sys.path 0)))))
+
+(defn add-import-path!
+  [doc-uri root-path add-path]
+  (when (added-import-path? root-path)
+    (logger.debug f"add-import-path!: doc-uri={doc-uri}, root-path={root-path}, add-path={add-path}")
+    (eval-in! `(sys.path.insert 0 ~add-path) doc-uri)))
+
 (defn load-src!
-  [src root-uri doc-uri [prefix None] [changed? False] [need-import? True]]
+  [src root-uri doc-uri [mod None] [changed? False] [need-import? True]]
   "TODO: docs"
   (try
-    (logger.debug f"load-src!: $SYMS.count={(->> ($GLOBAL.get-$SYMS) count)}, root-uri={root-uri}, doc-uri={doc-uri}, prefix={prefix}, changed?={changed?}")
-    ; (when (not changed?) ($GLOBAL.clean-$SYMS))
-    (let [mod (detect-mod-by-uris root-uri doc-uri prefix)
+    (logger.debug f"load-src!: $SYMS.count={(->> ($GLOBAL.get-$SYMS) count)}, root-uri={root-uri}, doc-uri={doc-uri}, mod={mod}, changed?={changed?}")
+    (let [mod (or mod (uri->mod root-uri doc-uri))
           root-path (remove-uri-prefix root-uri)
           venv-lib-path f"{root-path}/.venv/lib"]
-      (eval-in! `(import sys)
-                doc-uri)
+      (eval-in! `(import sys) doc-uri)
       ;; add import path for venv
       ;; TODO: user can set config #11
       (when (isdir venv-lib-path)
-        (logger.debug f"found venv: venv-path={venv-lib-path}")
         (let [dirname (-> venv-lib-path listdir first)
               target-path f"{venv-lib-path}/{dirname}/site-packages"]
-          (logger.debug f"adding module path: target-path={target-path}")
-          (eval-in! `(when (not (= ~root-path (get sys.path 0)))
-                       (sys.path.insert 0 ~target-path))
-                    doc-uri)))
+          (add-import-path! doc-uri root-path target-path)))
       ;; add import path root-uri
-      (logger.debug f"adding root-uri path to sys.path: root-path={root-path}")
-      (eval-in! `(when (not (= ~root-path (get sys.path 0)))
-                   (sys.path.insert 0 ~root-path))
-                doc-uri))
-    (eval-in! `(import hyuga.sym.dummy) doc-uri "hyuga.sym.dummy")
-    (let [mod (detect-mod-by-uris root-uri doc-uri prefix)
-          forms (hy.read-many src :filename doc-uri)]
-      (->> forms (map #%(walk-form! %1 root-uri doc-uri mod changed? need-import?)) tuple))
+      (add-import-path! doc-uri root-path root-path)
+      ;; read and analyze src
+      (->> (hy.read-many src :filename doc-uri)
+           (map #%(walk-form! %1
+                              root-uri doc-uri
+                              mod changed? need-import?))
+           tuple))
+    ; (eval-in! `(import hyuga.sym.dummy) doc-uri "hyuga.sym.dummy")
     (except
       [e BaseException]
       (log-warn "load-src!" e))
