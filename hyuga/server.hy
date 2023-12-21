@@ -1,11 +1,11 @@
 (require hyrule * :readers *)
 (import toolz.itertoolz *)
-(import pygls.lsp.methods [COMPLETION
-                           HOVER
-                           DEFINITION
-                           TEXT_DOCUMENT_DID_CHANGE
-                           TEXT_DOCUMENT_DID_CLOSE
-                           TEXT_DOCUMENT_DID_OPEN])
+(import lsprotocol.types [TEXT_DOCUMENT_COMPLETION
+                          TEXT_DOCUMENT_HOVER
+                          TEXT_DOCUMENT_DEFINITION
+                          TEXT_DOCUMENT_DID_CHANGE
+                          TEXT_DOCUMENT_DID_CLOSE
+                          TEXT_DOCUMENT_DID_OPEN])
 (import pygls.server [LanguageServer])
 
 (import hyuga.api *)
@@ -14,9 +14,9 @@
 (import hyuga.lspspec *)
 (import hyuga.log [logger])
 
-(setv $SERVER (LanguageServer))
+(setv $SERVER (LanguageServer :name "my-language-server" :version "v0.1.2"))
 
-(defn [($SERVER.feature COMPLETION)] completion
+(defn [($SERVER.feature TEXT_DOCUMENT_COMPLETION)] completion
   [params]
   "`textDocument/completion` request handler."
   (try
@@ -35,7 +35,7 @@
             (log-error "completion" e)
             (raise e))))
 
-(defn [($SERVER.feature HOVER)] hover
+(defn [($SERVER.feature TEXT_DOCUMENT_HOVER)] hover
   [params]
   "`textDocument/hover` request handler."
   ;; FIXME: only match in context
@@ -56,7 +56,7 @@
       (log-error "hover" e)
       (raise e))))
 
-(defn [($SERVER.feature DEFINITION)] definition
+(defn [($SERVER.feature TEXT_DOCUMENT_DEFINITION)] definition
   [params]
   (try
     (let [word (cursor-word-all $SERVER

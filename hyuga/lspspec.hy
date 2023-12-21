@@ -3,17 +3,17 @@
 
 (import inspect *)
 (import toolz.itertoolz *)
-(import pygls.lsp.types [CompletionItem
-                         CompletionList
-                         CompletionOptions
-                         CompletionParams
-                         CompletionItemKind
-                         Hover
-                         Range
-                         Location
-                         Position
-                         MarkupContent
-                         MarkupKind])
+(import lsprotocol.types [CompletionItem
+                          CompletionList
+                          CompletionOptions
+                          CompletionParams
+                          CompletionItemKind
+                          Hover
+                          Range
+                          Location
+                          Position
+                          MarkupContent
+                          MarkupKind])
 (import re)
 
 (import hyuga.log *)
@@ -65,7 +65,7 @@
               ; "macro" 118115
               ; "macro" CompletionItemKind.Macro
               else (decide-kind-by-type typev))
-      int))
+      (CompletionItemKind)))
 
 (defn create-item
   [word sym/dic]
