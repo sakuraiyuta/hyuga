@@ -1,0 +1,40 @@
+{
+  "name": "hyuga",
+  "version": "0.1.2",
+  "author": "Yuuta Sakurai",
+  "license": "MIT",
+  "description": "Yet Another Hy Language Server",
+  "keywords": [
+    "hy",
+    "LSP"
+  ],
+  "categories": [
+    "hy",
+    "Programming Languages"
+  ],
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "main": "./extension.js",
+  "activationEvents": [
+    "onLanguage:hy"
+  ],
+  "contributes": {
+    "languages": [
+      {
+        "id": "hy",
+        "aliases": [
+          "Hy",
+          "hy"
+        ],
+        "extensions": [
+          ".hy"
+        ]
+      }
+    ]
+  },
+  "dependencies": {
+    "vscode-languageclient": "^7.0.0"
+  },
+  "private": true
+}
