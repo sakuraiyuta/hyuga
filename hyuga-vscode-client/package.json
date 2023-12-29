@@ -37,8 +37,9 @@
     ]
   },
   "scripts": {
-    "package": "cp ../README.md ./ && cp ../LICENSE ./ && pnpm vsce package --no-dependencies && rm README.md && rm LICENSE",
-    "publish": "pnpm vsce publish --no-dependencies",
+    "package": "cp ../README.md ./ && cp ../LICENSE ./ && pnpm vsce package --no-dependencies",
+    "pre-release": "pnpm run package && pnpm vsce publish --no-dependencies --pre-release",
+    "publish": "pnpm run package && pnpm vsce publish --no-dependencies",
     "vscode:prepublish": "npm run esbuild-base -- --minify",
     "esbuild-base": "esbuild ./src/extension.ts --bundle --outfile=out/extension.js --external:vscode --format=cjs --platform=node",
     "compile": "tsc -p ./",
