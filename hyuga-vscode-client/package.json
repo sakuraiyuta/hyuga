@@ -4,6 +4,7 @@
   "author": "Yuuta Sakurai",
   "license": "MIT",
   "publisher": "sakuraiyuta",
+  "repository": "https://github.com/sakuraiyuta/hyuga",
   "displayName": "Hyuga VSCode Client",
   "description": "Hy LSP(hyuga) Client for VSCode",
   "engines": {
@@ -11,6 +12,7 @@
   },
   "keywords": [
     "hy",
+    "hylang",
     "LSP"
   ],
   "categories": [
@@ -35,7 +37,10 @@
     ]
   },
   "scripts": {
-    "vscode:prepublish": "pnpm run compile",
+    "package": "cp ../README.md ./ && cp ../LICENSE ./ && pnpm vsce package --no-dependencies && rm README.md && rm LICENSE",
+    "publish": "pnpm vsce publish --no-dependencies",
+    "vscode:prepublish": "npm run esbuild-base -- --minify",
+    "esbuild-base": "esbuild ./src/extension.ts --bundle --outfile=out/extension.js --external:vscode --format=cjs --platform=node",
     "compile": "tsc -p ./",
     "watch": "tsc -watch -p ./",
     "pretest": "pnpm run compile && pnpm run lint",
