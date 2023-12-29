@@ -11,20 +11,22 @@ Verified-working Hy version: [0.24.0](https://github.com/hylang/hy/tree/stable)
 
 - `textDocument/did{Open,Change}`
 - `textDocument/completion`
-  - Show candidates all modules installed in your system, classes/functions in opening source. (plain Python-symbols included)
+  - Display a list of all modules installed in your system, including classes/functions in the currently open source. (Plain Python symbols are also included.)
 - `textDocument/definition`
-  - Jump to definition. (currently refered hy-source only)
+  - Jump to the definition. (Currently, this refers to hy-source only.)
 - `textDocument/hover`
 
 ## Screenshots
 
 ### Completion
 
-![Hyuga sample movie: completion](https://raw.githubusercontent.com/sakuraiyuta/hyuga/images/hyuga-image-completion.gif)
+![Hyuga sample movie: completion on neovim](https://raw.githubusercontent.com/sakuraiyuta/hyuga/images/hyuga-image-completion.gif)
+![Hyuga sample movie: completion on vscode](https://raw.githubusercontent.com/sakuraiyuta/hyuga/images/hyuga-image-completion-vscode.gif)
 
 ### Jump to definition
 
-![Hyuga sample movie: jump-to-definition](https://raw.githubusercontent.com/sakuraiyuta/hyuga/images/hyuga-image-jump-def.gif)
+![Hyuga sample movie: jump-to-definition on neovim](https://raw.githubusercontent.com/sakuraiyuta/hyuga/images/hyuga-image-jump-def.gif)
+![Hyuga sample movie: jump-to-definition on vscode](https://raw.githubusercontent.com/sakuraiyuta/hyuga/images/hyuga-image-jump-def-vscode.gif)
 
 
 ## Install
@@ -50,7 +52,8 @@ And open `*.hy` file with `filetype=hy`, then run `:LspInstallServer`
 
 ### [Visual Studio Code(VSCode)](https://code.visualstudio.com)
 
-TODO: implement
+- Install `hyuga` to your python environment. (Refer to the `Plain install` section for details.)
+- In VSCode, open `Extensions` view, search for `hyuga`, and install `Hyuga VSCode Client`.
 
 ## Development
 

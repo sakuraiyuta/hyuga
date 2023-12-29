@@ -6,3 +6,7 @@ __pycache__
 /hyuga.egg-info
 !/hyuga/__init__.py
 !/hyuga/__main__.py
+/hyuga/*.c
+/hyuga/*.so
+
+**/*.orig
