@@ -10,3 +10,4 @@ __pycache__
 /hyuga/*.so
 
 **/*.orig
+images/
