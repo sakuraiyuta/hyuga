@@ -15,8 +15,9 @@
   (logger.debug f"parse-src!: start. $SYMS.count={(count ($GLOBAL.get-$SYMS))}, root-uri={root-uri}, doc-uri={doc-uri}")
   (for [loader-fn [load-builtin!
                    load-hy-special!
-                   (partial load-src! src root-uri doc-uri)
-                   load-sys!]]
+                   load-sys!
+                   (partial load-venv! root-uri doc-uri)
+                   (partial load-src! src root-uri doc-uri)]]
     (loader-fn))
   (logger.debug f"parse-src!: finished. $SYMS.count={(count ($GLOBAL.get-$SYMS))}, root-uri={root-uri}, doc-uri={doc-uri}"))
 
@@ -70,8 +71,9 @@
         #%(let [key (first %1)]
             (and (in (get-scope key) [editting-mod
                                       "(builtin)"
-                                      "(system)"
-                                      "(hy-special)"
+                                      "(hykwd)"
+                                      "(sysenv)"
+                                      "(venv)"
                                       module-or-class])
                  (or (.startswith (get-ns key) module-or-class)
                      (.startswith (get-scope key) module-or-class))

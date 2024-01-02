@@ -12,6 +12,8 @@
 (import sys [modules])
 (import re)
 (import functools [partial])
+(import pkgutil [iter_modules])
+(import types [ModuleType])
 
 (import hyuga.log [logger])
 (import hyuga.sym.helper *)
@@ -50,11 +52,15 @@
   [sym-hy/val scope [pos None] [doc-uri None]]
   "TODO: doc"
   (let [[sym-hy val] sym-hy/val
-        docs (create-docs sym-hy val scope doc-uri)]
+        docs (create-docs sym-hy val scope doc-uri)
+        doc-uri (or doc-uri
+                    (and (not (= scope "(builtin)"))
+                         (isinstance val ModuleType)
+                         (hasattr val "__file__")
+                         val.__file__))]
     ($GLOBAL.add-$SYMS
       {"sym" (get-full-sym scope sym-hy) "type" val "uri" doc-uri
-       "scope" scope
-       "docs" docs "pos" pos})))
+       "scope" scope "docs" docs "pos" pos})))
 
 (defn load-target?
   [form]
@@ -69,9 +75,11 @@
 
 (defn eval-in!
   [form [doc-uri "file:///dummy"] [mod "hyuga.sym.dummy"]]
-  (hy.eval form
-           :locals hyuga.sym.dummy.__dict__
-           :compiler (get-hy-builder doc-uri mod "compiler")))
+  (let [result
+        (hy.eval form
+                 :locals hyuga.sym.dummy.__dict__
+                 :compiler (get-hy-builder doc-uri mod "compiler"))]
+    result))
 
 (defn load-hy-src!
   [form fname root-uri]
@@ -85,13 +93,16 @@
 (defn hy-src?
   [summary doc-uri]
   "TODO: doc"
-  (let [dic (-> f"{(:name summary)}.__dict__"
-                hy.read (eval-in! doc-uri "hyuga.sym.dummy"))
-        keys (.keys dic)]
-    (when (and (in "hy" keys)
-               (in "__file__" keys)
-               (re.search r".hy[c]*$" (get dic "__file__")))
-      dic)))
+  (logger.debug f"hy-src? summary={summary}, doc-uri={doc-uri}")
+  (let [name (:name summary)
+        has-dict? (-> f"(hasattr {name} \"__dict__\")" hy.read eval-in!)]
+    (when (and (-> f"(hasattr {name} \"__dict__\")" hy.read eval-in!)
+               (-> f"(hasattr {name} \"__file__\")" hy.read eval-in!)
+               (-> f"(in \"__builtins__\" ({name}.__dict__.keys))" hy.read eval-in!)
+               (-> f"(in \"__hy_injected__\" (-> {name}.__dict__ (get \"__builtins__\") .keys))" hy.read eval-in!)
+               (-> f"(get {name}.__dict__ \"__builtins__\" \"__hy_injected__\")" hy.read eval-in!)
+               (re.search r".hy[c]*$" (-> f"{name}.__file__" hy.read eval-in!)))
+      (-> f"{name}.__file__" hy.read eval-in!))))
 
 (defn load-imported-pypkg!
   [summary mod doc-uri changed?]
@@ -126,13 +137,13 @@
 (defn load-import!
   [form summary mod root-uri doc-uri changed?]
   "TODO: doc"
-  (logger.debug f"load-import!: name={(:name summary)}, mod={mod}, root-uri={root-uri}, doc-uri={doc-uri}, changed?={changed?}")
+  (logger.debug f"load-import!: summary={summary}, mod={mod}, root-uri={root-uri}, doc-uri={doc-uri}, changed?={changed?}")
   (-> f"(import {(:name summary)})"
       (hy.read)
       (eval-in! doc-uri "hyuga.sym.dummy"))
-  (let [dic (hy-src? summary doc-uri)]
-    (if dic
-      (load-hy-src! form (get dic "__file__") root-uri)
+  (let [fname (hy-src? summary doc-uri)]
+    (if fname
+      (load-hy-src! form fname root-uri)
       (load-pymodule-syms! summary doc-uri changed?)))
   (load-imported-pypkg! summary mod doc-uri changed?))
 
@@ -222,16 +233,8 @@
   (try
     (logger.debug f"load-src!: $SYMS.count={(->> ($GLOBAL.get-$SYMS) count)}, root-uri={root-uri}, doc-uri={doc-uri}, mod={mod}, changed?={changed?}")
     (let [mod (or mod (uri->mod root-uri doc-uri))
-          root-path (remove-uri-prefix root-uri)
-          venv-lib-path (get-venv root-uri)]
-      (logger.debug f"\tvenv={venv-lib-path}")
+          root-path (remove-uri-prefix root-uri)]
       (eval-in! `(import sys) doc-uri)
-      ;; add import path for venv
-      ;; TODO: user can set config #11
-      (when (isdir venv-lib-path)
-        (let [dirname (-> venv-lib-path listdir first)
-              target-path f"{venv-lib-path}/{dirname}/site-packages"]
-          (add-import-path! doc-uri root-path target-path)))
       ;; add import path root-uri
       (add-import-path! doc-uri root-path root-path)
       ;; read and analyze src
@@ -240,7 +243,6 @@
                               root-uri doc-uri
                               mod changed? need-import?))
            tuple))
-    ; (eval-in! `(import hyuga.sym.dummy) doc-uri "hyuga.sym.dummy")
     (except
       [e BaseException]
       (log-warn "load-src!" e))
@@ -254,15 +256,34 @@
 (defn load-hy-special!
   []
   "TODO: docs"
-  (load-sym! "(hy-special)" (->> (hy-specials) (map #%(return [%1 %1])))))
+  (load-sym! "(hykwd)" (->> (hy-specials) (map #%(return [%1 %1])))))
 
 (defn load-sys!
   []
   "TODO: docs"
   ;; TODO: toggle enable/disable to list sys.modules #11
-  (load-sym! "(system)" (->> modules .items
+  (load-sym! "(sysenv)" (->> modules .items
                              (filter #%(not (.startswith (first %1) "hyuga.")))
                              tuple)))
+
+(defn load-venv!
+  [root-uri doc-uri]
+  (eval-in! `(import sys))
+  (let [venv-path (get-venv root-uri)
+        prev-sys-path (eval-in! `sys.path)]
+    ;; TODO: user can set config #11
+    (logger.debug f"load-venv! venv-path={venv-path} prev-sys-path={prev-sys-path}")
+    (eval-in! `(sys.path.insert 0 ~venv-path))
+    (let [syms (->> (iter-modules :path [venv-path])
+                    (map #%(. %1 name))
+                    (filter #%(not (= "sys" %1)))
+                    (filter #%(not (in f"(sysenv)\\{(first %1)}" (->> ($GLOBAL.get-$SYMS) .keys))))
+                    tuple)
+          items (->> syms
+                     (map #%(return #(%1 (-> f"(import {%1})\n{%1}" hy.read-many eval-in!))))
+                     tuple)]
+      (load-sym! "(venv)" items))
+    (eval-in! `(setv sys.path ~prev-sys-path))))
 
 (defn load-required-macros!
   [summary mod doc-uri changed?]
@@ -270,7 +291,7 @@
   (let+ [{name "name" pos "pos"} summary
          items (-> f"({name}.__macros__.items)"
                    hy.read (eval-in! doc-uri mod))]
-    (logger.debug f"load-required-macros! mod={mod}, doc-uri={doc-uri}, changed?={changed?}")
+    (logger.debug f"load-required-macros! summary={summary}, mod={mod}, doc-uri={doc-uri}, changed?={changed?}")
     (load-sym! mod items pos doc-uri changed?)))
 
 (defn load-macro!

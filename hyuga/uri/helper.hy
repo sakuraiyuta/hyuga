@@ -1,7 +1,10 @@
 (require hyrule * :readers *)
+(import os [listdir])
 (import re [sub])
 (import subprocess)
 (import shutil [which])
+(import toolz.itertoolz *)
+(import hyuga.log [logger])
 
 (defn remove-uri-prefix
   [uri]
@@ -17,7 +20,9 @@
 
 (defn get-venv
   [root-uri]
-  (let [root-path (remove-uri-prefix root-uri)]
-    (if (which "poetry")
-      f"{(get-poetry-venv)}/lib"
-      f"{root-path}/.venv/lib")))
+  (let [root-path (remove-uri-prefix root-uri)
+        base-venv-path (if (which "poetry")
+                         f"{(get-poetry-venv)}/lib"
+                         f"{root-path}/.venv/lib")
+        venv-python-dir (->> (listdir base-venv-path) first)]
+    f"{base-venv-path}/{venv-python-dir}/site-packages"))
