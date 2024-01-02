@@ -15,7 +15,7 @@
 (import hyuga.lspspec *)
 (import hyuga.log [logger])
 
-(setv $SERVER (LanguageServer :name "my-language-server" :version (get-version)))
+(setv $SERVER (LanguageServer :name __package__ :version (get-version)))
 
 (defn [($SERVER.feature TEXT_DOCUMENT_COMPLETION)] completion
   [params]

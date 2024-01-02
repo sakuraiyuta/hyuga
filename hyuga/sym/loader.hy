@@ -19,7 +19,7 @@
 (import hyuga.sym.summary [get-form-summary])
 (import hyuga.sym.doc [create-docs])
 (import hyuga.sym.filter [filter-add-targets])
-(import hyuga.uri.helper [remove-uri-prefix])
+(import hyuga.uri.helper [remove-uri-prefix get-venv])
 
 ; {"{doc-uri}" {"compiler" HyASTCompiler
 ;               "reader" HyReader}}
@@ -223,7 +223,8 @@
     (logger.debug f"load-src!: $SYMS.count={(->> ($GLOBAL.get-$SYMS) count)}, root-uri={root-uri}, doc-uri={doc-uri}, mod={mod}, changed?={changed?}")
     (let [mod (or mod (uri->mod root-uri doc-uri))
           root-path (remove-uri-prefix root-uri)
-          venv-lib-path f"{root-path}/.venv/lib"]
+          venv-lib-path (get-venv root-uri)]
+      (logger.debug f"\tvenv={venv-lib-path}")
       (eval-in! `(import sys) doc-uri)
       ;; add import path for venv
       ;; TODO: user can set config #11
