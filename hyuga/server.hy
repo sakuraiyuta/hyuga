@@ -9,12 +9,13 @@
 (import pygls.server [LanguageServer])
 
 (import hyuga.api *)
+(import hyuga.version [get-version])
 (import hyuga.sym.loader [load-src!])
 (import hyuga.cursor *)
 (import hyuga.lspspec *)
 (import hyuga.log [logger])
 
-(setv $SERVER (LanguageServer :name "my-language-server" :version "v0.1.2"))
+(setv $SERVER (LanguageServer :name "my-language-server" :version (get-version)))
 
 (defn [($SERVER.feature TEXT_DOCUMENT_COMPLETION)] completion
   [params]

@@ -1,6 +1,8 @@
 import argparse
+import toml
 import hy
 from .server import start
+from .version import get_version
 
 
 def main():
@@ -15,7 +17,8 @@ def main():
     args = parser.parse_args()
 
     if args.version:
-        print('hyuga v0.0.1')
+        version = get_version()
+        print(f'{__package__} - v{version}')
         return
 
     start()
