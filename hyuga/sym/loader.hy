@@ -12,7 +12,7 @@
 (import sys [modules])
 (import re)
 (import functools [partial])
-(import pkgutil [iter_modules])
+(import pkgutil [iter_modules get_loader walk_packages])
 (import types [ModuleType])
 
 (import hyuga.log [logger])
@@ -94,8 +94,7 @@
   [summary doc-uri]
   "TODO: doc"
   (logger.debug f"hy-src? summary={summary}, doc-uri={doc-uri}")
-  (let [name (:name summary)
-        has-dict? (-> f"(hasattr {name} \"__dict__\")" hy.read eval-in!)]
+  (let [name (:name summary)]
     (when (and (-> f"(hasattr {name} \"__dict__\")" hy.read eval-in!)
                (-> f"(hasattr {name} \"__file__\")" hy.read eval-in!)
                (-> f"(in \"__builtins__\" ({name}.__dict__.keys))" hy.read eval-in!)
@@ -273,14 +272,20 @@
         prev-sys-path (eval-in! `sys.path)]
     ;; TODO: user can set config #11
     (logger.debug f"load-venv! venv-path={venv-path} prev-sys-path={prev-sys-path}")
-    (eval-in! `(sys.path.insert 0 ~venv-path))
-    (let [syms (->> (iter-modules :path [venv-path])
+    (eval-in! `(import pkgutil))
+    (eval-in! `(sys.path.append ~venv-path))
+    (let [syms (->> `(pkgutil.iter-modules :path [~venv-path])
+                    eval-in!
                     (map #%(. %1 name))
-                    (filter #%(not (= "sys" %1)))
-                    (filter #%(not (in f"(sysenv)\\{(first %1)}" (->> ($GLOBAL.get-$SYMS) .keys))))
+                    ;; FIXME: importing setuptools causes distutils AssertionError.
+                    ;; @see https://github.com/pypa/setuptools/issues/3297
+                    (filter #%(not (.startswith %1 "_")))
+                    (filter #%(not (= %1 "setuptools")))
+                    (filter #%(not (in f"(sysenv)\\{%1}" (->> ($GLOBAL.get-$SYMS) .keys))))
                     tuple)
+          _ (logger.debug f"{syms}")
           items (->> syms
-                     (map #%(return #(%1 (-> f"(import {%1})\n{%1}" hy.read-many eval-in!))))
+                     (map #%(return #(%1 (-> f"(-> (pkgutil.get-loader \"{%1}\") .load-module)" hy.read eval-in!))))
                      tuple)]
       (load-sym! "(venv)" items))
     (eval-in! `(setv sys.path ~prev-sys-path))))
