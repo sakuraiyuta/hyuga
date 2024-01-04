@@ -5,7 +5,8 @@
                           TEXT_DOCUMENT_DEFINITION
                           TEXT_DOCUMENT_DID_CHANGE
                           TEXT_DOCUMENT_DID_CLOSE
-                          TEXT_DOCUMENT_DID_OPEN])
+                          TEXT_DOCUMENT_DID_OPEN
+                          CompletionOptions])
 (import pygls.server [LanguageServer])
 
 (import hyuga.api *)
@@ -18,7 +19,9 @@
 
 (setv $SERVER (LanguageServer :name __package__ :version (get-version)))
 
-(defn [($SERVER.feature TEXT_DOCUMENT_COMPLETION)] completion
+(defn [($SERVER.feature
+         TEXT_DOCUMENT_COMPLETION
+         :options (CompletionOptions :trigger-characters ["." " "]))] completion
   [params]
   "`textDocument/completion` request handler."
   (try
