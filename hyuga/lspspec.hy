@@ -68,26 +68,26 @@
       (CompletionItemKind)))
 
 (defn create-item
-  [word sym/dic]
+  [word full-sym/dic]
   "TODO: doc"
-  (let [[sym dic] sym/dic]
+  (let [[full-sym dic] full-sym/dic]
     (when (isinstance dic dict)
       (let+ [{docs "docs" typev "type"} dic
              prefix-splitted (.split word ".")
-             [scope full-sym] (get-scope/ns sym)
-             [ns sym] (get-ns/sym full-sym)
+             [scope ns sym] (get-scope/ns/sym full-sym)
              word-ns (module-or-class? prefix-splitted)
-             fixed-prefix (if ns
+             fixed-prefix (if (and ns
+                                   (not (.startswith ns "("))
+                                   (not (.endswith ns ")")))
                             (-> ns
                                 (+ ".")
                                 (.replace word-ns "")
                                 (.lstrip "."))
                             "")
-             insert-text (if word-ns
-                           f"{fixed-prefix}{sym}"
-                           full-sym)]
+             insert-text sym
+             label f"[{ns}] {sym}"]
         (CompletionItem
-          :label f"[{(or (fix-dummy ns) (fix-dummy scope))}] {sym}"
+          :label label
           :insert_text insert-text
           :detail (fix-dummy docs)
           :kind (decide-kind scope typev))))))

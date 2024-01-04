@@ -12,9 +12,10 @@
 
   (defn add-$SYMS
     [self data]
-    ;; {"sym" f"{scope}\\{ns}.{sym}"
+    ;; {"sym" f"{scope}\\{ns}\\{sym}"
     ;;  "type" v
     ;;  "scope" scope
+    ;;  "ns" ns
     ;;  "pos" pos
     ;;  "uri" uri
     ;;  "docs" docs}
