@@ -14,6 +14,7 @@
 (import hyuga.cursor *)
 (import hyuga.lspspec *)
 (import hyuga.log [logger])
+(import hyuga.version [get-version])
 
 (setv $SERVER (LanguageServer :name __package__ :version (get-version)))
 
@@ -33,8 +34,8 @@
              create-completion-list)
         (create-completion-list [])))
     (except [e Exception]
-            (log-error "completion" e)
-            (raise e))))
+      (log-error "completion" e)
+      (raise e))))
 
 (defn [($SERVER.feature TEXT_DOCUMENT_HOVER)] hover
   [params]
@@ -73,8 +74,8 @@
           (logger.debug f"locations={locations}")
           locations)))
     (except [e Exception]
-            (log-error "definition" e)
-            (raise e))))
+      (log-error "definition" e)
+      (raise e))))
 
 (defn [($SERVER.feature TEXT_DOCUMENT_DID_OPEN)] did-open
   [params]
@@ -86,8 +87,8 @@
                 $SERVER.workspace.root_uri
                 params.text_document.uri)
     (except [e Exception]
-            (log-error "did-open" e)
-            (raise e))))
+      (log-error "did-open" e)
+      (raise e))))
 
 (defn [($SERVER.feature TEXT_DOCUMENT_DID_CLOSE)] did-close
   [params]
@@ -107,9 +108,10 @@
                  params.text_document.uri)
                True)
     (except [e Exception]
-            (log-error "did-open" e)
-            (raise e))))
+      (log-error "did-open" e)
+      (raise e))))
 
 (defn start
   []
+  (logger.info f"----- hyuga {(get-version)} start -----")
   ($SERVER.start_io))

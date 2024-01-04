@@ -13,12 +13,12 @@
   [src root-uri doc-uri]
   "TODO: doc"
   (logger.debug f"parse-src!: start. $SYMS.count={(count ($GLOBAL.get-$SYMS))}, root-uri={root-uri}, doc-uri={doc-uri}")
-  (for [loader-fn [load-builtin!
-                   load-hy-special!
-                   load-sys!
-                   (partial load-venv! root-uri doc-uri)
-                   (partial load-src! src root-uri doc-uri)]]
-    (loader-fn))
+  (when (= 0 (count ($GLOBAL.get-$SYMS)))
+    (load-builtin!)
+    (load-hy-special!)
+    (load-sys!)
+    (load-venv! root-uri doc-uri))
+  (load-src! src root-uri doc-uri)
   (logger.debug f"parse-src!: finished. $SYMS.count={(count ($GLOBAL.get-$SYMS))}, root-uri={root-uri}, doc-uri={doc-uri}"))
 
 (defn get-details
