@@ -25,44 +25,26 @@
 
 (defn get-ns
   [symkey]
-  (-> symkey get-scope/ns second get-ns/sym first))
+  (-> symkey get-scope/ns/sym second))
 
 (defn get-sym
   [symkey]
-  (-> symkey get-scope/ns second get-ns/sym second))
+  (-> symkey get-scope/ns/sym last))
 
 (defn get-scope
   [symkey]
-  (-> symkey get-scope/ns first))
-
-(defn get-ns/sym
-  [val]
-  (let [splitted (.split val ".")]
-    [(->> splitted
-       (drop-last 1)
-       tuple
-       (.join "."))
-     (last splitted)]))
+  (-> symkey get-scope/ns/sym first))
 
 (defn get-scope/ns/sym
-  [full-sym]
-  (let [[scope full-ns] (get-scope/ns full-sym)
-        [ns sym] (get-ns/sym full-ns)]
-    [scope ns sym]))
-
-;; TODO: change name to get-scope/full-ns
-(defn get-scope/ns
   [symkey]
   (let [splitted (.split symkey "\\")]
-    (if (> (count splitted) 1)
-      splitted
-      ["" (first splitted)])))
+    (branch (= (count splitted) it)
+            3 splitted
+            1 ["" "" symkey])))
 
 (defn get-full-sym
-  [prefix sym]
-  (if prefix
-    (+ prefix "\\" sym)
-    (+ "(unknown)\\" sym)))
+  [scope ns sym]
+  (+ scope "\\" ns "\\" sym))
 
 (defn sym-py/val->sym-hy/val
   [sym-py/val]

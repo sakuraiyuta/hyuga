@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "hyuga"
-version = "0.1.5"
+version = "0.2.0"
 description = "Hyuga - Yet Another Hy Language Server"
 authors = ["Yuuta Sakurai <sakurai.yuta@gmail.com>"]
 license = "MIT"

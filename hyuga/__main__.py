@@ -1,5 +1,4 @@
 import argparse
-import toml
 import hy
 from .server import start
 from .version import get_version
