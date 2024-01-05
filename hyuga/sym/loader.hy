@@ -297,7 +297,7 @@
     (logger.debug f"load-venv! venv-path={venv-path} prev-sys-path={prev-sys-path}")
     (when (isdir venv-path)
       (eval-in! `(import pkgutil))
-      (eval-in! `(sys.path.append ~venv-path))
+      (eval-in! `(sys.path.insert 0 ~venv-path))
       (let [filter-fn #%(and (not (.startswith %1 "_"))
                              ;; FIXME: importing pip causes distutils AssertionError.
                              ;; @see https://github.com/pypa/setuptools/issues/3297
