@@ -248,9 +248,12 @@
       ;; add import path root-uri
       (add-import-path! doc-uri root-path root-path)
       ;; add self as module
-      (let [val (-> f"(and (import {ns}) ns)" hy.read
-          (eval-in! doc-uri))]
-        (add-sym! #(ns val) "(venv)" #(0 0) doc-uri))
+      (try
+        (let [val (-> f"(and (import {ns}) ns)" hy.read
+                      (eval-in! doc-uri))]
+          (add-sym! #(ns val) "(venv)" #(0 0) doc-uri))
+        (except [e BaseException]
+          (logger.debug f"\tit seems not in namespace...skipping ns={ns}")))
       ;; read and analyze src
       (->> (hy.read-many src :filename doc-uri)
            (map #%(walk-form! %1
