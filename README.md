@@ -23,7 +23,7 @@ Verified-working Hy version: [0.24.0](https://github.com/hylang/hy/tree/stable)
 
 We need your help to check the support status for each hy version.
 
-Please report the results [in this issue]!
+Please report the results [in this issue](https://github.com/sakuraiyuta/hyuga/issues/17)!
 
 ## Feature
 
