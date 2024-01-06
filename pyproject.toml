@@ -1,11 +1,11 @@
 [tool.poetry]
 name = "hyuga"
-version = "0.2.0"
+version = "0.2.1"
 description = "Hyuga - Yet Another Hy Language Server"
 authors = ["Yuuta Sakurai <sakurai.yuta@gmail.com>"]
 license = "MIT"
 readme = "README.md"
-include = ["pyproject.toml"]
+include = []
 
 [tool.poetry.dependencies]
 python = "^3.7.9,<3.11"
@@ -13,7 +13,6 @@ hy = "^0.24.0"
 hyrule = "^0.2"
 toolz = "^0.12.0"
 pygls = "^1.2.1"
-toml = "^0.10.2"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^7.1.3"

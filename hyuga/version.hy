@@ -1,6 +1,5 @@
-(import toml)
+(import pkg-resources)
 
 (defn get-version
   []
-  (let [pyprj (toml.load "pyproject.toml")]
-    (get pyprj "tool" "poetry" "version")))
+  (. (pkg-resources.get-distribution "hyuga") version))
