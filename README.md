@@ -5,7 +5,7 @@ Hyuga - Yet Another Hy Language Server
 
 Forked from [hy-language-server](https://github.com/rinx/hy-language-server).
 
-** This software is still experimental stage! **
+**This software is still in the experimental stage!**
 
 Please be aware that specifications may change without prior notice.
 
@@ -57,16 +57,7 @@ pip3 install hyuga
 
 ### [neovim(nvim)](https://github.com/neovim/neovim) + [vim-lsp](https://github.com/prabirshrestha/vim-lsp) + [vim-lsp-settings](https://github.com/mattn/vim-lsp-settings)
 
-**Note:** Currently `vim-lsp-settings` doesn't have installer for Hyuga.
-You can test with [my vim-lsp-settings branch](https://github.com/sakuraiyuta/vim-lsp-settings/tree/add-lang/hyuga).
-
-Sample for dein:
-
-```vim
-call dein#add('sakuraiyuta/vim-lsp-settings', {'rev': 'add-lang/hyuga'})
-```
-
-And open `*.hy` file with `filetype=hy`, then run `:LspInstallServer`
+Install [vim-lsp](https://github.com/prabirshrestha/vim-lsp) and [vim-lsp-settings](https://github.com/mattn/vim-lsp-settings), open a `*.hy` file with `filetype=hy`, then run `:LspInstallServer`
 
 ### [Visual Studio Code(VSCode)](https://code.visualstudio.com)
 
