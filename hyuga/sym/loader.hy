@@ -126,7 +126,7 @@
                          tuple)
                     True #())]
     ;; TODO: check imported syms in pypkg.(candidates can't find all syms...use getattr?)
-    (logger.debug f"trying to load pypkg syms. name={name}, includes={includes}, pypkg-ns={pypkg-ns}, ns={ns}, doc-uri={doc-uri}, changed?={recur?}")
+    (logger.debug f"trying to load pypkg syms. name={name}, includes={includes}, pypkg-ns={pypkg-ns}, ns={ns}, doc-uri={doc-uri}, recur?={recur?}")
     (load-sym! pypkg-ns filtered pos doc-uri recur? ns)))
 
 (defn load-pymodule-syms!
@@ -143,7 +143,7 @@
 (defn load-import!
   [form summary ns root-uri doc-uri recur?]
   "TODO: doc"
-  (logger.debug f"load-import!: summary={summary}, ns={ns}, root-uri={root-uri}, doc-uri={doc-uri}, changed?={recur?}")
+  (logger.debug f"load-import!: summary={summary}, ns={ns}, root-uri={root-uri}, doc-uri={doc-uri}, recur?={recur?}")
   (-> f"(import {(:name summary)})"
       (hy.read)
       (eval-in! doc-uri "hyuga.sym.dummy"))
@@ -172,7 +172,7 @@
     (let+ [summary (get-form-summary form)
            ns (or ns (uri->mod root-uri doc-uri))
            {pos "pos" hytype "type" name "name"} summary]
-      (logger.debug f"analyze-form!: summary={hytype}/{name}, doc-uri={doc-uri}, ns={ns}, changed?={recur?}")
+      (logger.debug f"analyze-form!: summary={hytype}/{name}, doc-uri={doc-uri}, ns={ns}, recur?={recur?}")
       (when (= "defmacro" hytype)
         (load-macro! name ns pos doc-uri recur?))
       (when (= "require" hytype)
@@ -237,7 +237,7 @@
   [src root-uri doc-uri [ns None] [recur? False] [need-import? True]]
   "TODO: docs"
   (try
-    (logger.debug f"load-src!: $SYMS.count={(->> ($GLOBAL.get-$SYMS) count)}, root-uri={root-uri}, doc-uri={doc-uri}, ns={ns}, changed?={recur?}")
+    (logger.debug f"load-src!: $SYMS.count={(->> ($GLOBAL.get-$SYMS) count)}, root-uri={root-uri}, doc-uri={doc-uri}, ns={ns}, recur?={recur?}")
     (let [ns (or ns (uri->mod root-uri doc-uri))
           root-path (remove-uri-prefix root-uri)]
       (eval-in! `(import sys) doc-uri)
@@ -259,7 +259,7 @@
     (except
       [e BaseException]
       (log-warn "load-src!" e))
-    (else (logger.debug f"load-src!: finished. $SYMS.count={(->> ($GLOBAL.get-$SYMS) count)}, root-uri={root-uri}, doc-uri={doc-uri}, changed?={recur?}"))))
+    (else (logger.debug f"load-src!: finished. $SYMS.count={(->> ($GLOBAL.get-$SYMS) count)}, root-uri={root-uri}, doc-uri={doc-uri}, recur?={recur?}"))))
 
 (defn load-builtin!
   []
@@ -319,13 +319,13 @@
   (let+ [{name "name" pos "pos"} summary
          items (-> f"({name}.__macros__.items)" hy.read (eval-in! doc-uri ns))
          filtered (->> items filter-not-reserved tuple)]
-    (logger.debug f"load-required-macros! summary={summary}, ns={ns}, doc-uri={doc-uri}, changed?={recur?}")
+    (logger.debug f"load-required-macros! summary={summary}, ns={ns}, doc-uri={doc-uri}, recur?={recur?}")
     (load-sym! name filtered pos doc-uri recur?)))
 
 (defn load-macro!
   [name ns pos uri recur?]
   "TODO: doc"
-  (logger.debug f"load-macro! name={name}, ns={ns}, uri={uri}, changed?={recur?}")
+  (logger.debug f"load-macro! name={name}, ns={ns}, uri={uri}, recur?={recur?}")
   (let [items (-> f"({ns}.__macros__.items)"
                   (hy.read)
                   (eval-in! uri ns))
