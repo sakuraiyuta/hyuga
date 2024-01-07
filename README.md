@@ -5,7 +5,7 @@ Hyuga - Yet Another Hy Language Server
 
 Forked from [hy-language-server](https://github.com/rinx/hy-language-server).
 
-** This software is still experimental stage! **
+**This software is still in the experimental stage!**
 
 Please be aware that specifications may change without prior notice.
 
