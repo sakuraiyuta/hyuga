@@ -150,11 +150,7 @@
   (let [fname (hy-src? summary doc-uri)]
     (if fname
       (load-hy-src! form fname root-uri)
-  (load-imported-pypkg! summary ns doc-uri recur?)
-;      (load-pymodule-syms! summary doc-uri recur?)
-      ))
-;  (load-imported-pypkg! summary ns doc-uri recur?)
-  )
+  (load-imported-pypkg! summary ns doc-uri recur?))))
 
 (defn load-class-methods!
   [ns name doc-uri summary recur?]
