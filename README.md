@@ -57,13 +57,10 @@ pip3 install hyuga
 
 ### [neovim(nvim)](https://github.com/neovim/neovim) + [vim-lsp](https://github.com/prabirshrestha/vim-lsp) + [vim-lsp-settings](https://github.com/mattn/vim-lsp-settings)
 
-**Note:** Currently `vim-lsp-settings` doesn't have installer for Hyuga.
-You can test with [my vim-lsp-settings branch](https://github.com/sakuraiyuta/vim-lsp-settings/tree/add-lang/hyuga).
-
-Sample for dein:
+Add your `.vimrc`:
 
 ```vim
-call dein#add('sakuraiyuta/vim-lsp-settings', {'rev': 'add-lang/hyuga'})
+call dein#add('mattn/vim-lsp-settings')
 ```
 
 And open `*.hy` file with `filetype=hy`, then run `:LspInstallServer`
