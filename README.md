@@ -57,13 +57,7 @@ pip3 install hyuga
 
 ### [neovim(nvim)](https://github.com/neovim/neovim) + [vim-lsp](https://github.com/prabirshrestha/vim-lsp) + [vim-lsp-settings](https://github.com/mattn/vim-lsp-settings)
 
-Add your `.vimrc`:
-
-```vim
-call dein#add('mattn/vim-lsp-settings')
-```
-
-And open `*.hy` file with `filetype=hy`, then run `:LspInstallServer`
+Install [vim-lsp](https://github.com/prabirshrestha/vim-lsp) and [vim-lsp-settings](https://github.com/mattn/vim-lsp-settings), open a `*.hy` file with `filetype=hy`, then run `:LspInstallServer`
 
 ### [Visual Studio Code(VSCode)](https://code.visualstudio.com)
 
