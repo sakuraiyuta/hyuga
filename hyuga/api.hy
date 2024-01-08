@@ -18,7 +18,7 @@
     (load-hy-special!)
     (load-sys!)
     (load-venv! root-uri))
-  (load-src! src root-uri doc-uri)
+  (load-src! src root-uri doc-uri (uri->mod root-uri doc-uri) True)
   (logger.debug f"parse-src!: finished. $SYMS.count={(count ($GLOBAL.get-$SYMS))}, root-uri={root-uri}, doc-uri={doc-uri}"))
 
 (defn get-details
@@ -96,12 +96,11 @@
         _ (logger.debug f"\ttgt-scope={tgt-scope}, tgt-sym={tgt-sym}")
         filter-fn
         #%(let [[loaded-scope loaded-ns loaded-sym]
-                (get-scope/ns/sym (first %1))
-                loaded-scope (-> %1 second (get "scope"))]
+                (get-scope/ns/sym (first %1))]
             (or (= loaded-scope tgt-full-sym)
+                (= loaded-ns tgt-full-sym)
                 (and (= tgt-scope loaded-scope)
-                     (= loaded-sym tgt-sym))
-                (= loaded-sym tgt-sym)))]
+                     (= loaded-sym tgt-sym))))]
     (->> ($GLOBAL.get-$SYMS) .items
          ;; TODO: jump by module name(e.g. sym-tgt=hyrule.collections)
          (filter filter-fn)

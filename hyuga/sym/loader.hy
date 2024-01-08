@@ -14,32 +14,15 @@
 (import pkgutil [iter_modules get_loader])
 (import types [ModuleType])
 
-(import hyuga.log [logger])
+(import hyuga.log *)
 (import hyuga.sym.helper *)
+(import hyuga.sym.spec *)
 (import hyuga.sym.dummy)
 (import hyuga.sym.summary [get-form-summary])
 (import hyuga.sym.doc [create-docs])
 (import hyuga.sym.filter [filter-add-targets
                           filter-not-reserved])
 (import hyuga.uri.helper [remove-uri-prefix get-venv])
-
-; {"{doc-uri}" {"compiler" HyASTCompiler
-;               "reader" HyReader}}
-(setv $compiler {})
-
-(defn get-hy-builder
-  [doc-uri ns key]
-  "TODO: doc"
-  (if (in doc-uri ($compiler.keys))
-    (-> (get $compiler doc-uri) (get key))
-    (do
-      (logger.debug f"creating new compiler: doc-uri={doc-uri}, ns={ns}")
-      (assoc $compiler doc-uri
-             {"compiler" (HyASTCompiler
-                           :module ns
-                           :filename (remove-uri-prefix doc-uri))
-              "reader" (HyReader)})
-      (get-hy-builder doc-uri ns key))))
 
 (defn load-sym!
   [ns syms [pos None] [uri None] [recur? False] [scope ""]]
@@ -82,12 +65,12 @@
     result))
 
 (defn load-hy-src!
-  [form fname root-uri]
+  [form fname root-uri ns]
   "TODO: doc"
   (logger.debug f"trying to load hy-source. fname={fname}")
   (with [file (open fname)]
     (-> (file.read)
-        (load-src! root-uri f"file://{file.name}" (-> form second hy.repr (.strip "'"))
+        (load-src! root-uri f"file://{file.name}" ns
                    False False))))
 
 (defn hy-src?
@@ -146,7 +129,7 @@
   (-> f"(import {(:name summary)})" (hy.read) (eval-in!))
   (let [fname (hy-src? summary doc-uri)]
     (if fname
-      (load-hy-src! form fname root-uri)
+      (load-hy-src! form fname root-uri ns)
   (load-imported-pypkg! summary ns doc-uri recur?))))
 
 (defn load-class-methods!
@@ -187,7 +170,7 @@
                 (= hytype "setv"))
         (load-sym! ns
                    #(#(name summary))
-                   pos doc-uri recur?))
+                   pos doc-uri recur? ns))
       (when (= hytype "defclass")
         (load-class-methods! ns name doc-uri
                              summary recur?)))
@@ -223,30 +206,30 @@
 (defn load-src!
   [src root-uri doc-uri [ns None] [recur? False] [need-import? True]]
   "TODO: docs"
+  (logger.debug f"load-src!: $SYMS.count={(->> ($GLOBAL.get-$SYMS) count)}, root-uri={root-uri}, doc-uri={doc-uri}, ns={ns}, recur?={recur?}")
   (try
-    (logger.debug f"load-src!: $SYMS.count={(->> ($GLOBAL.get-$SYMS) count)}, root-uri={root-uri}, doc-uri={doc-uri}, ns={ns}, recur?={recur?}")
-    (let [ns (or ns (uri->mod root-uri doc-uri))
-          root-path (remove-uri-prefix root-uri)]
-      (eval-in! `(import sys) ns)
-      ;; add import path root-uri
-      ;; add self as module
+    (let [root-path (remove-uri-prefix root-uri)]
       (try
-        (when (eval-in! `(not (in ~root-path sys.path)) ns)
-          (logger.debug f"\tadd sys.path and import self: root-path={root-path}, ns={ns}"))
-        (load-sym! ns (get-modules-by-pkgutil root-path))
-        (-> f"(import {ns})" hy.read (eval-in! ns))
+        ;; try import self as module/package
+        (eval-in! `(import sys pkgutil) ns)
+        (when (and ns
+                   (eval-in! `(not (in ~root-path sys.path)) ns))
+          (logger.debug f"\tadd sys.path and import self: root-path={root-path}, ns={ns}")
+          (load-sym! ns (get-modules-by-pkgutil root-path)))
+
         (except [e BaseException]
-          (logger.warn f"\tit seems not in namespace...skipping ns={ns}")
-          (logger.warn f"\te={e}")))
-      ;; read and analyze src
-      (->> (hy.read-many src :filename doc-uri)
-           (map #%(walk-form! %1
-                              root-uri doc-uri
-                              ns recur? need-import?))
-           tuple))
-    (except
-      [e BaseException]
-      (log-warn "load-src!" e))
+          (log-warn f"\tit seems not in namespace...skipping ns={ns}" e)
+          ;; remove ns and try again
+          (when (not ns) (load-src! src root-uri doc-uri None True)))
+
+        (else
+          ;; read and analyze src
+          (->> (hy.read-many src :filename doc-uri)
+               (map #%(walk-form! %1
+                                  root-uri doc-uri
+                                  ns recur? need-import?))
+               tuple))))
+
     (else (logger.debug f"load-src!: finished. $SYMS.count={(->> ($GLOBAL.get-$SYMS) count)}, root-uri={root-uri}, doc-uri={doc-uri}, recur?={recur?}"))))
 
 (defn load-builtin!
@@ -277,12 +260,11 @@
   [root-uri]
   "Load venv."
   ;; TODO: user can set config #11
-  (eval-in! `(import sys))
-  (let [venv-path (get-venv root-uri)
-        prev-sys-path (eval-in! `sys.path)]
+  (let [venv-path (get-venv root-uri)]
     (logger.debug f"load-venv! venv-path={venv-path}")
     (when (isdir venv-path)
-      (eval-in! `(import pkgutil))
+      (logger.debug f"\tget-module-specs={(get-module-specs venv-path)}")
+      (eval-in! `(import sys pkgutil))
       (load-sym! "(venv)" (get-modules-by-pkgutil venv-path)))))
 
 (defn get-modules-by-pkgutil
@@ -290,12 +272,14 @@
   (logger.debug f"get-modules-by-pkgutil path={path}")
   (let [prev-sys-path (eval-in! `sys.path)
         _ (eval-in! `(sys.path.insert 0 ~path))
+
         filter-fn
         #%(and (not (.startswith %1 "_"))
                ;; FIXME: importing pip causes distutils AssertionError.
                ;; @see https://github.com/pypa/setuptools/issues/3297
                (not (= %1 "pip"))
                (not (in f"(sysenv)\\{%1}" (->> ($GLOBAL.get-$SYMS) .keys))))
+
         ret (->> `(pkgutil.iter-modules :path [~path])
                  eval-in!
                  (map #%(. %1 name))
@@ -316,15 +300,15 @@
          items (-> f"({name}._hy_macros.items)" hy.read (eval-in! ns))
          filtered (->> items filter-not-reserved tuple)]
     (logger.debug f"load-required-macros! summary={summary}, ns={ns}, doc-uri={doc-uri}, recur?={recur?}")
-    (load-sym! name filtered pos doc-uri recur?)))
+    (load-sym! name filtered pos doc-uri recur? ns)))
 
 (defn load-macro!
   [name ns pos uri recur?]
   "TODO: doc"
   (logger.debug f"load-macro! name={name}, ns={ns}, uri={uri}, recur?={recur?}")
-  (let [items (-> f"({ns}._hy_macros.items)"
+  (let [items (-> f"({__name__}._hy_macros.items)"
                   (hy.read)
                   (eval-in!))
         matched (->> items
                      (filter #%(= name (first %1))))]
-    (load-sym! ns matched pos uri recur?)))
+    (load-sym! ns matched pos uri recur? ns)))
