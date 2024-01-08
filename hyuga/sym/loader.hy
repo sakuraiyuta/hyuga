@@ -2,7 +2,6 @@
 (require hyrule.collections [assoc])
 (import hyrule.collections [walk])
 
-(import hy.reserved [names :as hy-specials])
 (import hy.models [Expression])
 (import hy.compiler [HyASTCompiler])
 (import hy.reader [HyReader])
@@ -75,11 +74,11 @@
     False))
 
 (defn eval-in!
-  [form [doc-uri "file:///dummy"] [ns "hyuga.sym.dummy"]]
+  [form [ns "hyuga.sym.dummy"]]
   (let [result
         (hy.eval form
-                 :locals hyuga.sym.dummy.__dict__
-                 :compiler (get-hy-builder doc-uri ns "compiler"))]
+                 :locals
+                 (-> f"(if (in \"{ns}\" (globals)) {ns}.__dict__ (globals))" hy.read hy.eval))]
     result))
 
 (defn load-hy-src!
@@ -88,7 +87,7 @@
   (logger.debug f"trying to load hy-source. fname={fname}")
   (with [file (open fname)]
     (-> (file.read)
-        (load-src! root-uri f"file://{file.name}" (second form)
+        (load-src! root-uri f"file://{file.name}" (-> form second hy.repr (.strip "'"))
                    False False))))
 
 (defn hy-src?
@@ -111,13 +110,13 @@
           includes "includes"} summary
          pypkg-items (-> f"{name}.__dict__"
                          hy.read
-                         (eval-in! doc-uri ns)
+                         (eval-in! ns)
                          .items tuple)
          next-items (->> pypkg-items
                          filter-not-reserved
                          tuple)
          pypkg-ns (-> f"{name}.__name__"
-                      hy.read (eval-in! doc-uri ns))
+                      hy.read (eval-in! ns))
          filtered (cond
                     (= includes "*") next-items
                     (isinstance includes list)
@@ -144,9 +143,7 @@
   [form summary ns root-uri doc-uri recur?]
   "TODO: doc"
   (logger.debug f"load-import!: summary={summary}, ns={ns}, root-uri={root-uri}, doc-uri={doc-uri}, recur?={recur?}")
-  (-> f"(import {(:name summary)})"
-      (hy.read)
-      (eval-in! doc-uri "hyuga.sym.dummy"))
+  (-> f"(import {(:name summary)})" (hy.read) (eval-in!))
   (let [fname (hy-src? summary doc-uri)]
     (if fname
       (load-hy-src! form fname root-uri)
@@ -176,7 +173,7 @@
       (when (= "defmacro" hytype)
         (load-macro! name ns pos doc-uri recur?))
       (when (= "require" hytype)
-        (eval-in! form doc-uri))
+        (eval-in! form))
       (when (and (or (= "require" hytype)
                      (= "import" hytype))
                  need-import?)
@@ -223,16 +220,6 @@
     (except [e BaseException]
             (log-warn "walk-form!" e))))
 
-(defn added-import-path?
-  [root-path]
-  (eval-in! `(not (= ~root-path (get sys.path 0)))))
-
-(defn add-import-path!
-  [doc-uri root-path add-path]
-  (when (added-import-path? root-path)
-    (logger.debug f"add-import-path!: doc-uri={doc-uri}, root-path={root-path}, add-path={add-path}")
-    (eval-in! `(sys.path.insert 0 ~add-path) doc-uri)))
-
 (defn load-src!
   [src root-uri doc-uri [ns None] [recur? False] [need-import? True]]
   "TODO: docs"
@@ -240,16 +227,17 @@
     (logger.debug f"load-src!: $SYMS.count={(->> ($GLOBAL.get-$SYMS) count)}, root-uri={root-uri}, doc-uri={doc-uri}, ns={ns}, recur?={recur?}")
     (let [ns (or ns (uri->mod root-uri doc-uri))
           root-path (remove-uri-prefix root-uri)]
-      (eval-in! `(import sys) doc-uri)
+      (eval-in! `(import sys) ns)
       ;; add import path root-uri
-      (add-import-path! doc-uri root-path root-path)
       ;; add self as module
       (try
-        (let [val (-> f"(and (import {ns}) ns)" hy.read
-                      (eval-in! doc-uri))]
-          (add-sym! #(ns val) "(venv)" #(0 0) doc-uri))
+        (when (eval-in! `(not (in ~root-path sys.path)) ns)
+          (logger.debug f"\tadd sys.path and import self: root-path={root-path}, ns={ns}"))
+        (load-sym! ns (get-modules-by-pkgutil root-path))
+        (-> f"(import {ns})" hy.read (eval-in! ns))
         (except [e BaseException]
-          (logger.debug f"\tit seems not in namespace...skipping ns={ns}")))
+          (logger.warn f"\tit seems not in namespace...skipping ns={ns}")
+          (logger.warn f"\te={e}")))
       ;; read and analyze src
       (->> (hy.read-many src :filename doc-uri)
            (map #%(walk-form! %1
@@ -264,12 +252,14 @@
 (defn load-builtin!
   []
   "TODO: docs"
-  (load-sym! "(builtin)" (__builtins__.items)))
+  (eval-in! `(import builtins))
+  (->> `(builtins.items)
+       (load-sym! "(builtin)")))
 
 (defn load-hy-special!
   []
   "TODO: docs"
-  (load-sym! "(hykwd)" (->> (hy-specials)
+  (load-sym! "(hykwd)" (->> (get-hy-macros)
                             (map #%(return #(%1 %1))))))
 
 (defn load-sys!
@@ -284,40 +274,46 @@
                         (not (.startswith (first %1) "_")))))))
 
 (defn load-venv!
-  [root-uri doc-uri]
+  [root-uri]
   "Load venv."
   ;; TODO: user can set config #11
   (eval-in! `(import sys))
   (let [venv-path (get-venv root-uri)
         prev-sys-path (eval-in! `sys.path)]
-    (logger.debug f"load-venv! venv-path={venv-path} prev-sys-path={prev-sys-path}")
+    (logger.debug f"load-venv! venv-path={venv-path}")
     (when (isdir venv-path)
       (eval-in! `(import pkgutil))
-      (eval-in! `(sys.path.insert 0 ~venv-path))
-      (let [filter-fn #%(and (not (.startswith %1 "_"))
-                             ;; FIXME: importing pip causes distutils AssertionError.
-                             ;; @see https://github.com/pypa/setuptools/issues/3297
-                             (not (= %1 "pip"))
-                             (not (in f"(sysenv)\\{%1}" (->> ($GLOBAL.get-$SYMS) .keys))))
-            syms (as-> `(pkgutil.iter-modules :path [~venv-path])
-                   it
-                   (eval-in! it doc-uri)
-                   (map #%(. %1 name) it)
-                   (filter filter-fn it))
-            items (->> syms
-                       (map #%(return
-                                #(%1 (-> `(-> ~%1
-                                              pkgutil.get-loader
-                                              .load-module)
-                                         (eval-in! doc-uri)))))
-                       tuple)]
-        (load-sym! "(venv)" items)))))
+      (load-sym! "(venv)" (get-modules-by-pkgutil venv-path)))))
+
+(defn get-modules-by-pkgutil
+  [path]
+  (logger.debug f"get-modules-by-pkgutil path={path}")
+  (let [prev-sys-path (eval-in! `sys.path)
+        _ (eval-in! `(sys.path.insert 0 ~path))
+        filter-fn
+        #%(and (not (.startswith %1 "_"))
+               ;; FIXME: importing pip causes distutils AssertionError.
+               ;; @see https://github.com/pypa/setuptools/issues/3297
+               (not (= %1 "pip"))
+               (not (in f"(sysenv)\\{%1}" (->> ($GLOBAL.get-$SYMS) .keys))))
+        ret (->> `(pkgutil.iter-modules :path [~path])
+                 eval-in!
+                 (map #%(. %1 name))
+                 (filter filter-fn)
+                 (map #%(return
+                          #(%1 (-> `(-> ~%1
+                                        pkgutil.get-loader
+                                        .load-module)
+                                   eval-in!))))
+                 tuple)]
+    (eval-in! `(setv sys.path ~prev-sys-path))
+    ret))
 
 (defn load-required-macros!
   [summary ns doc-uri recur?]
   "TODO: doc"
   (let+ [{name "name" pos "pos"} summary
-         items (-> f"({name}.__macros__.items)" hy.read (eval-in! doc-uri ns))
+         items (-> f"({name}._hy_macros.items)" hy.read (eval-in! ns))
          filtered (->> items filter-not-reserved tuple)]
     (logger.debug f"load-required-macros! summary={summary}, ns={ns}, doc-uri={doc-uri}, recur?={recur?}")
     (load-sym! name filtered pos doc-uri recur?)))
@@ -326,9 +322,9 @@
   [name ns pos uri recur?]
   "TODO: doc"
   (logger.debug f"load-macro! name={name}, ns={ns}, uri={uri}, recur?={recur?}")
-  (let [items (-> f"({ns}.__macros__.items)"
+  (let [items (-> f"({ns}._hy_macros.items)"
                   (hy.read)
-                  (eval-in! uri ns))
+                  (eval-in!))
         matched (->> items
                      (filter #%(= name (first %1))))]
     (load-sym! ns matched pos uri recur?)))

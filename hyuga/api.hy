@@ -17,7 +17,7 @@
     (load-builtin!)
     (load-hy-special!)
     (load-sys!)
-    (load-venv! root-uri doc-uri))
+    (load-venv! root-uri))
   (load-src! src root-uri doc-uri)
   (logger.debug f"parse-src!: finished. $SYMS.count={(count ($GLOBAL.get-$SYMS))}, root-uri={root-uri}, doc-uri={doc-uri}"))
 

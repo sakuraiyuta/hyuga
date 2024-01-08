@@ -1,9 +1,9 @@
 (require hyrule * :readers *)
 
+(import builtins)
 (import toolz.itertoolz *)
 
 (import hyuga.sym.helper *)
-(import hy.reserved [names :as hy-specials])
 
 (defn not-exclude-sym?
   [sym-hy/val]
@@ -43,7 +43,7 @@
   [items]
   (->> items
        (filter #%(and (not (in (first %1)
-                               (__builtins__.keys)))
+                               (builtins.__dict__.keys)))
                       (not (in (-> %1 first sym-py->hy)
-                               (tuple (hy-specials))))))))
+                               (tuple (get-hy-macros))))))))
 

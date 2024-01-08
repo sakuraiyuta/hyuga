@@ -84,11 +84,11 @@
   [params]
   (try
     (logger.info f"did-open: uri={params.text_document.uri}")
-    (parse-src! (-> params.text_document.uri
-                    $SERVER.workspace.get_document
-                    (. source))
-                $SERVER.workspace.root_uri
-                params.text_document.uri)
+    (let [text-document (-> params.text_document.uri
+                            $SERVER.workspace.get_text_document)]
+      (parse-src! text-document.source
+                  $SERVER.workspace.root_uri
+                  params.text_document.uri))
     (except [e Exception]
       (log-error "did-open" e)
       (raise e))))
@@ -101,15 +101,15 @@
   [params]
   (try
     (logger.info f"did-change: uri={params.text_document.uri}")
-    (load-src! (-> params.text_document.uri
-                   $SERVER.workspace.get_document
-                   (. source))
-               $SERVER.workspace.root_uri
-               params.text_document.uri
-               (uri->mod
+    (let [text-document (-> params.text_document.uri
+                            $SERVER.workspace.get_text_document)]
+      (load-src! text-document.source
                  $SERVER.workspace.root_uri
-                 params.text_document.uri)
-               True)
+                 params.text_document.uri
+                 (uri->mod
+                   $SERVER.workspace.root_uri
+                   params.text_document.uri)
+                 True))
     (except [e Exception]
       (log-error "did-open" e)
       (raise e))))

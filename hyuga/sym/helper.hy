@@ -4,6 +4,7 @@
 (import os.path [dirname])
 (import inspect [getmodulename])
 (import toolz.itertoolz *)
+(import builtins)
 
 (import hyuga.log *)
 (import hyuga.global [$GLOBAL])
@@ -87,3 +88,7 @@
       (module.__dict__.items))
     (except [e BaseException]
             (error-trace logger.warning "get-module-attrs" e))))
+
+(defn get-hy-macros
+  []
+  (builtins._hy_macros.keys))
