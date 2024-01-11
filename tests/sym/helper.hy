@@ -1,109 +1,141 @@
 (require hyrule * :readers *)
+(import hyrule.hypprint [pp])
 
 (import pytest)
-(import toolz.itertoolz [first])
 
-(import hyuga.global [$GLOBAL])
 (import hyuga.sym.helper *)
-(import fixture [fixture-syms])
-(import misc *)
+
+(defn [(pytest.mark.parametrize
+         #("root_uri" "doc_uri" "expected")
+         [#(
+            "file:///home/yuta/git/hyuga"
+            "file:///home/yuta/git/hyuga/hyuga/sym/spec.hy"
+            "hyuga.sym.spec"
+            )
+          #(
+            "file:///dummy"
+            "file:///home/yuta/git/hyuga/hyuga/sym/spec.hy"
+            "file:...home.yuta.git.hyuga.hyuga.sym.spec"
+            )])]
+  test_uri__mod
+  [root_uri doc_uri expected]
+  (let [result (uri->mod root_uri doc_uri)]
+    (assert (= result expected))))
+
+(defn [(pytest.mark.parametrize
+         #("form" "expected")
+         [#('(a) "(a)")
+          #('a "a")
+          #('(com (ple) x) "(com (ple) x)")])]
+  test_fix_hy_symbol
+  [form expected]
+  (let [result (fix-hy-symbol form)]
+    (assert (= result expected))))
+
+(defn [(pytest.mark.parametrize
+         #("symkey" "expected")
+         [#("a\\b\\c" "b")])]
+  test_get_ns
+  [symkey expected]
+  (let [result (get-ns symkey)]
+    (assert (= result expected))))
+
+(defn [(pytest.mark.parametrize
+         #("symkey" "expected")
+         [#("a\\b\\c" "c")])]
+  test_get_sym
+  [symkey expected]
+  (let [result (get-sym symkey)]
+    (assert (= result expected))))
+
+(defn [(pytest.mark.parametrize
+         #("symkey" "expected")
+         [#("a\\b\\c" "a")])]
+  test_get_scope
+  [symkey expected]
+  (let [result (get-scope symkey)]
+    (assert (= result expected))))
+
+(defn [(pytest.mark.parametrize
+         #("symkey" "expected")
+         [#("a\\b\\c" ["a" "b" "c"])])]
+  test_get_scope_ns_sym
+  [symkey expected]
+  (let [result (get-scope/ns/sym symkey)]
+    (assert (= result expected))))
+
+(defn [(pytest.mark.parametrize
+         #("scope" "ns" "sym" "expected")
+         [#("a" "b" "c" "a\\b\\c")])]
+  test_get_full_sym
+  [scope ns sym expected]
+  (let [result (get-full-sym scope ns sym)]
+    (assert (= result expected))))
+
+(defn [(pytest.mark.parametrize
+         #("val" "expected")
+         [#(["a_b" None] ["a-b" None])
+          #(["hyx_aXsolidusXb" None] ["a/b" None])])]
+  test_sym_py_val_sym_hy_val
+  [val expected]
+  (let [result (sym-py/val->sym-hy/val val)]
+    (assert (= result expected))))
 
 (defn [(pytest.mark.parametrize
          #("val" "expected")
          [#("a_b" "a-b")
           #("a>b" "a>b")
           #("a.__doc__" "a.__doc__")])]
-  test_sym-py-hy
+  test_sym_py_hy
   [val expected]
-  (assert (= (sym-py->hy val) expected)))
+  (let [result (sym-py->hy val)]
+    (assert (= result expected))))
 
 (defn [(pytest.mark.parametrize
          #("val" "expected")
          [#("a-b" "a_b")
           #("a>b" "hyx_aXgreaterHthan_signXb")
           #("a.__doc__" "a.__doc__")])]
-  test_sym-hy-py
+  test_sym_hy_py
   [val expected]
-  (assert (= (sym-hy->py val) expected)))
+  (let [result (sym-hy->py val)]
+    (assert (= result expected))))
 
 (defn [(pytest.mark.parametrize
-         #("val" "expected")
-         [#(["a_b" None] ["a-b" None])
-          #(["hyx_aXsolidusXb" None] ["a/b" None])])]
-  test_sym-py-val-sym-hy-val
-  [val expected]
-  (assert (= (sym-py/val->sym-hy/val val) expected)))
+         #("sym_splitted" "expected")
+         [#(#("mesa" "ti") "mesa")
+          #(#("mesa" "") "mesa")
+          #(#("mesa") "")
+          #(#("hyuga" "sym" "helper") "hyuga.sym")])]
+  test_module_or_class
+  [sym_splitted expected]
+  (let [result (module-or-class? sym_splitted)]
+    (assert (= result expected))))
 
-(defn [(pytest.mark.parametrize
-         #("val" "expected")
-         [#(["first" None] False)
-          #(["toolz" None] False)
-          #(["!not-in-sym!" None] True)])]
-  test_not-in-sym
-  [val expected fixture-syms]
-  (assert (= (not-in-$SYM? val) expected)))
-
-(defn [(pytest.mark.parametrize
-         #("val" "expected")
-         [#(["eval" None] True)
-          #(["first" None] True)
-          #(["toolz" None] True)
-          #(["_hy-let" None] False)
-          #(["_hy-anon" None] False)
-          #(["-hyuga-eval-form" None] False)])]
-  test_not-exclude-sym
-  [val expected fixture-syms]
-  (assert (= (not-exclude-sym? val) expected)))
-
-(defn [(pytest.mark.parametrize
-         #("val" "scope" "expected")
-         [#(["eval" eval]
-            "local"
-            {"sym" "eval"
-             "type" eval
-             "scope" "local"
-             "docs" (docs-str eval "local")})
-          #(["first" first]
-            "global"
-            {"sym" "first"
-             "type" first
-             "scope" "global"
-             "docs" (docs-str first "global")})])]
-  test_add-sym
-  [val scope expected fixture-syms]
-  (assert (= (add-sym! val scope) expected)))
-
-;; TODO: testcase for -get-macro-doc
-;(eval-define! "")
-;(defn [(let [val-doto (-> ($GLOBAL.get-$SYMS)
-;                           (get "doto")
-;                           (get "type"))]
-;       (pytest.mark.parametrize
-;         #("symhy" "symtype" "expected")
-;         [#("doto"
-;             val-doto
-;             f"doto {val-doto}\n  macro\n\n{(doc val-doto)}")]))]
-;  test_get-macro-doc
-;  [symhy symtype expected fixture-syms]
-;  (assert (= (-get-macro-doc symhy symtype) expected)))
-;(-get-macro-doc "defmacro!" defmacro!)
-
-(defn [(pytest.mark.parametrize
-         #("symhy" "symtype" "scope" "expected")
-         [#("create-docs"
-             create-docs
-             "global"
-             (docs-str create-docs "global"))])]
-  test_create-docs
-  [symhy symtype scope expected]
-  (assert (= (create-docs symhy symtype scope) expected)))
-
+;; TODO: implement
 ;(defn [(pytest.mark.parametrize
-;         #("symsplitted" "expected")
-;         [#(#("mesa" "ti") "mesa")
-;          #(#("mesa" "") "mesa")
-;          #(#("mesa") "")
-;          #(#("hyuga" "sym" "helper") "hyuga.sym")])]
-;  test_module-or-class
-;  [symsplitted expected]
-;  (assert (= (module-or-class? symsplitted) expected)))
+;         #("sym_hy" "expected")
+;         [#()])]
+;  test_get_module_in_syms
+;  [sym_hy expected]
+;  (let [result (get-module-in-syms sym_hy)]
+;    (assert (= result expected))))
+
+;; TODO: implement
+;(defn [(pytest.mark.parametrize
+;         #("module_name" "expected")
+;         [#()])]
+;  test_get_module-attrs
+;  [module_name expected]
+;  (let [result (get-module-in-syms module_name)]
+;    (assert (= result expected))))
+
+;; TODO: implement
+;(defn [(pytest.mark.parametrize
+;         #("expected")
+;         [#("mesa")])]
+;  test_get_hy_macros
+;  [expected]
+;  (let [result (get-hy-macros)]
+;    (pp result)
+;    (assert (= result expected))))
