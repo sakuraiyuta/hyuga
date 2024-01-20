@@ -111,7 +111,7 @@
                    params.text_document.uri)
                  True))
     (except [e Exception]
-      (log-error "did-open" e)
+      (log-error "did-change" e)
       (raise e))))
 
 (defn start

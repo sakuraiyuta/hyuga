@@ -1,8 +1,10 @@
 (require hyrule * :readers *)
 
+(import hyrule.hypprint [pformat])
+
 (import hyuga.log *)
 (import hyuga.sym.helper *)
-(import hyrule.hypprint [pformat])
+(import hyuga.sym.eval [eval-in!])
 
 (defn create-docs
   [sym-hy symtype scope uri]
@@ -26,8 +28,7 @@
             (let+ [{args "args"
                     value "value"
                     docs "docs"} symtype]
-              (logger.debug f"value={value},docs={docs}")
-              f"setv {sym-hy}\n\t[{scope}]\n\n`{(pformat (hy.eval value))}`")
+              f"setv {sym-hy}\n\t[{scope}]\n\n`{(if (or (= (type value) hy.models.Expression) (= (type value) hy.models.Symbol)) (hy.repr value) (pformat (eval-in! value scope)))}`")
 
             else f"unknown")
     (try

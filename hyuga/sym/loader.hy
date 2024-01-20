@@ -14,6 +14,7 @@
 (import pkgutil [iter_modules get_loader])
 (import types [ModuleType])
 
+(import .eval [eval-in!])
 (import .helper *)
 (import .spec *)
 (import .summary [get-form-summary])
@@ -54,14 +55,6 @@
           (.startswith sym "setv")
           (.startswith sym "def")))
     False))
-
-(defn eval-in!
-  [form [ns "hyuga.sym.dummy"]]
-  (let [result
-        (hy.eval form
-                 :locals
-                 (-> f"(if (in \"{ns}\" (globals)) {ns}.__dict__ (globals))" hy.read hy.eval))]
-    result))
 
 (defn load-hy-src!
   [form fname root-uri ns]
