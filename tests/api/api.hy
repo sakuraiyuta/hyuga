@@ -117,15 +117,15 @@
   "fn-sample"
   {"sym"  "test-src.root\\test-src.root\\fn-sample"
   "ns"    "test-src.root"
-  "pos"   #(1 7)
+  "pos"   #(5 7)
   "scope" "test-src.root"
   "type"  {"args" (hy.models.List)
            "decorators" None
            "docs" ""
            "name" "fn-sample"
-           "pos" #(1 7)
+           "pos" #(5 7)
            "type" "defn"}
-  "uri"   (-> __file__ os.path.dirname (os.path.join "sample_src" "root.hy"))
+  "uri"   uri
   "docs"  (-> f"
   defn fn-sample None []
   \t[test-src.root]"

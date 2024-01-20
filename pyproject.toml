@@ -23,3 +23,7 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.poetry.scripts]
 hyuga = "hyuga.__main__:main"
+
+[tool.pytest.ini_options]
+log_file = "./pytest.log"
+log_file_level = "DEBUG"
