@@ -27,8 +27,12 @@
             "setv"
             (let+ [{args "args"
                     value "value"
-                    docs "docs"} symtype]
-              f"setv {sym-hy}\n\t[{scope}]\n\n`{(if (or (= (type value) hy.models.Expression) (= (type value) hy.models.Symbol)) (hy.repr value) (pformat (eval-in! value scope)))}`")
+                    docs "docs"} symtype
+                   val (if (or (= (type value) hy.models.Expression)
+                               (= (type value) hy.models.Symbol))
+                         (hy.repr value)
+                         (pformat (eval-in! value scope)))]
+              f"setv {sym-hy}\n\t[{scope}]\n\n`{val}`")
 
             else f"unknown")
     (try
