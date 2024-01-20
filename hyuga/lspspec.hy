@@ -75,7 +75,7 @@
       (let+ [{docs "docs" typev "type"} dic
              prefix-splitted (.split word ".")
              [scope ns sym] (get-scope/ns/sym full-sym)
-             word-ns (module-or-class? prefix-splitted)
+             word-ns (module-or-class? word)
              fixed-prefix (if (and ns
                                    (not (.startswith ns "("))
                                    (not (.endswith ns ")")))

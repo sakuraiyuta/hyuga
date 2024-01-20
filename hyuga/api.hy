@@ -15,7 +15,7 @@
   (logger.debug f"parse-src!: start. $SYMS.count={(count ($GLOBAL.get-$SYMS))}, root-uri={root-uri}, doc-uri={doc-uri}")
   (when (= 0 (count ($GLOBAL.get-$SYMS)))
     (load-builtin!)
-    (load-hy-special!)
+    (load-hy-kwd!)
     (load-sys!)
     (load-venv! root-uri))
   (load-src! src root-uri doc-uri (uri->mod root-uri doc-uri) True)
@@ -59,8 +59,8 @@
     "
     (logger.debug f"get-candidates: prefix={prefix}")
     (let [editting-mod (uri->mod root-uri doc-uri)
+          module-or-class (module-or-class? prefix)
           splitted (.split prefix ".")
-          module-or-class (module-or-class? splitted)
           sym-prefix (if module-or-class
                        (last splitted)
                        prefix)

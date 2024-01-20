@@ -14,15 +14,14 @@
 (import pkgutil [iter_modules get_loader])
 (import types [ModuleType])
 
-(import hyuga.log *)
-(import hyuga.sym.helper *)
-(import hyuga.sym.spec *)
-(import hyuga.sym.dummy)
-(import hyuga.sym.summary [get-form-summary])
-(import hyuga.sym.doc [create-docs])
-(import hyuga.sym.filter [filter-add-targets
+(import .helper *)
+(import .spec *)
+(import .summary [get-form-summary])
+(import .doc [create-docs])
+(import .filter [filter-add-targets
                           filter-not-reserved])
-(import hyuga.uri.helper [remove-uri-prefix get-venv])
+(import ..uri.helper [remove-uri-prefix get-venv])
+(import ..log *)
 
 (defn load-sym!
   [ns syms [pos None] [uri None] [recur? False] [scope ""]]
@@ -74,9 +73,9 @@
                    False False))))
 
 (defn hy-src?
-  [summary doc-uri]
+  [summary]
   "TODO: doc"
-  (logger.debug f"hy-src? summary={summary}, doc-uri={doc-uri}")
+  (logger.debug f"hy-src? summary={summary}")
   (let [name (:name summary)]
     (when (and (-> f"(hasattr {name} \"__dict__\")" hy.read eval-in!)
                (-> f"(hasattr {name} \"__file__\")" hy.read eval-in!)
@@ -126,11 +125,13 @@
   [form summary ns root-uri doc-uri recur?]
   "TODO: doc"
   (logger.debug f"load-import!: summary={summary}, ns={ns}, root-uri={root-uri}, doc-uri={doc-uri}, recur?={recur?}")
-  (-> f"(import {(:name summary)})" (hy.read) (eval-in!))
-  (let [fname (hy-src? summary doc-uri)]
-    (if fname
-      (load-hy-src! form fname root-uri ns)
-  (load-imported-pypkg! summary ns doc-uri recur?))))
+  (let+ [{name "name"} summary]
+    (-> f"(import {name})" (hy.read) (eval-in!))
+    (let [fname (hy-src? summary)]
+      (if fname
+        ;; TODO: fix loading definition other src's symbol
+        (load-hy-src! form fname root-uri name)
+        (load-imported-pypkg! summary ns doc-uri recur?)))))
 
 (defn load-class-methods!
   [ns name doc-uri summary recur?]
@@ -209,6 +210,7 @@
   (logger.debug f"load-src!: $SYMS.count={(->> ($GLOBAL.get-$SYMS) count)}, root-uri={root-uri}, doc-uri={doc-uri}, ns={ns}, recur?={recur?}")
   (try
     (let [root-path (remove-uri-prefix root-uri)]
+
       (try
         ;; try import self as module/package
         (eval-in! `(import sys pkgutil) ns)
@@ -236,14 +238,14 @@
   []
   "TODO: docs"
   (eval-in! `(import builtins))
-  (->> `(builtins.items)
+  (->> `(.items (vars builtins))
+       eval-in!
        (load-sym! "(builtin)")))
 
-(defn load-hy-special!
+(defn load-hy-kwd!
   []
   "TODO: docs"
-  (load-sym! "(hykwd)" (->> (get-hy-macros)
-                            (map #%(return #(%1 %1))))))
+  (load-sym! "(hykwd)" (get-hy-macros)))
 
 (defn load-sys!
   []
@@ -306,9 +308,9 @@
   [name ns pos uri recur?]
   "TODO: doc"
   (logger.debug f"load-macro! name={name}, ns={ns}, uri={uri}, recur?={recur?}")
-  (let [items (-> f"({__name__}._hy_macros.items)"
+  (let [items (-> f"({ns}._hy_macros.items)"
                   (hy.read)
-                  (eval-in!))
+                  (eval-in! ns))
         matched (->> items
                      (filter #%(= name (first %1))))]
     (load-sym! ns matched pos uri recur? ns)))

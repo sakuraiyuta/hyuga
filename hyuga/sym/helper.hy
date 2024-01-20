@@ -11,6 +11,7 @@
 
 (defn uri->mod
   [root-uri doc-uri]
+  ;; TODO: replace to package loader
   (let [submod (getmodulename doc-uri)]
     (-> doc-uri
         (.replace root-uri "")
@@ -65,30 +66,15 @@
        (.join ".")))
 
 (defn module-or-class?
-  [sym-splitted]
+  [sym [ns ""]]
   "TODO: doc"
-  (if (-> sym-splitted count (> 1))
-    (->> sym-splitted (drop-last 1) (.join "."))
-    ""))
-
-(defn get-module-in-syms
-  [sym-hy]
-  "TODO: doc"
-  (->> ($GLOBAL.get-$SYMS)
-       .items
-       (filter #%(= sym-hy (-> %1 first get-sym)))
-       first second :type))
-
-(defn get-module-attrs
-  [module-name]
-  "TODO: doc"
-  (try
-    (let [module (get-module-in-syms module-name)]
-      (logger.debug f"get-module-attrs: module={module}")
-      (module.__dict__.items))
-    (except [e BaseException]
-            (error-trace logger.warning "get-module-attrs" e))))
+  (if (.startswith sym ".")
+    ns
+    (let [splitted (.split sym ".")]
+      (if (-> splitted count (> 1))
+        (->> splitted (drop-last 1) (.join "."))
+        ""))))
 
 (defn get-hy-macros
   []
-  (builtins._hy_macros.keys))
+  (builtins._hy_macros.items))

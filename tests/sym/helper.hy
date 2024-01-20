@@ -102,14 +102,15 @@
     (assert (= result expected))))
 
 (defn [(pytest.mark.parametrize
-         #("sym_splitted" "expected")
-         [#(#("mesa" "ti") "mesa")
-          #(#("mesa" "") "mesa")
-          #(#("mesa") "")
-          #(#("hyuga" "sym" "helper") "hyuga.sym")])]
+         #("sym" "ns" "expected")
+         [#("mesa.test" "" "mesa")
+          #("mesa" "" "")
+          #(".x" "" "")
+          #(".x" "mesa" "mesa")
+          #("hyuga.sym.helper" "" "hyuga.sym")])]
   test_module_or_class
-  [sym_splitted expected]
-  (let [result (module-or-class? sym_splitted)]
+  [sym ns expected]
+  (let [result (module-or-class? sym ns)]
     (assert (= result expected))))
 
 ;; TODO: implement
