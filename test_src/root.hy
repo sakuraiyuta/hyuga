@@ -1,3 +1,5 @@
+(import hyrule.collections *)
+
 (defn fn-sample
   []
   (print "hy!"))

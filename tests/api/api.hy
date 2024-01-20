@@ -3,9 +3,15 @@
 (import builtins)
 (import pytest)
 (import textwrap [dedent])
+(import pathlib [Path])
 
 (import hyuga.api *)
-(import .fixture [fixture-syms])
+(import ..fixture.sym [fixture-syms])
+
+(setv uri (let [path (Path __file__)]
+            (-> (nth 2 path.parents)
+                (.joinpath "test_src" "root.hy")
+                str)))
 
 (setv
   vals
@@ -29,19 +35,19 @@
 
   ;-------------
   "str-sample"
-  {"sym"  "sample-src.root\\sample-src.root\\str-sample"
-  "ns"    "sample-src.root"
-  "pos"   #(9 7)
-  "scope" "sample-src.root"
+  {"sym"  "test-src.root\\test-src.root\\str-sample"
+  "ns"    "test-src.root"
+  "pos"   #(13 7)
+  "scope" "test-src.root"
   "type"  {"docs" "\"sample value\""
            "name" "str-sample"
-           "pos" #(9 7)
+           "pos" #(13 7)
            "type" "setv"
             "value" (hy.models.String "sample value")}
-  "uri"   (-> __file__ os.path.dirname (os.path.join "sample_src" "root.hy"))
+  "uri"   uri
   "docs"  (-> f"
   setv str-sample
-  \t[sample-src.root]
+  \t[test-src.root]
   
   `\"sample value\"`
   "
@@ -49,19 +55,19 @@
 
   ;-------------
   "int-sample"
-  {"sym"  "sample-src.root\\sample-src.root\\int-sample"
-  "ns"    "sample-src.root"
-  "pos"   #(11 7)
-  "scope" "sample-src.root"
+  {"sym"  "test-src.root\\test-src.root\\int-sample"
+  "ns"    "test-src.root"
+  "pos"   #(15 7)
+  "scope" "test-src.root"
   "type"  {"docs" "123"
            "name" "int-sample"
-           "pos" #(11 7)
+           "pos" #(15 7)
            "type" "setv"
             "value" (hy.models.Integer 123)}
-  "uri"   (-> __file__ os.path.dirname (os.path.join "sample_src" "root.hy"))
+  "uri"   uri
   "docs"  (-> f"
   setv int-sample
-  \t[sample-src.root]
+  \t[test-src.root]
   
   `123`
   "
@@ -69,20 +75,20 @@
 
   ;-------------
   "dict-sample"
-  {"sym"  "sample-src.root\\sample-src.root\\dict-sample"
-  "ns"    "sample-src.root"
-  "pos"   #(13 7)
-  "scope" "sample-src.root"
+  {"sym"  "test-src.root\\test-src.root\\dict-sample"
+  "ns"    "test-src.root"
+  "pos"   #(17 7)
+  "scope" "test-src.root"
   "type"  {"docs" "{:key 12345}"
            "name" "dict-sample"
-           "pos" #(13 7)
+           "pos" #(17 7)
            "type" "setv"
             "value" (hy.models.Dict [(hy.models.Keyword "key")
                                      (hy.models.Integer 12345)])}
-  "uri"   (-> __file__ os.path.dirname (os.path.join "sample_src" "root.hy"))
+  "uri"   uri
   "docs"  (-> "
   setv dict-sample
-  \t[sample-src.root]
+  \t[test-src.root]
   
   `{:key 12345}`
   "
@@ -109,10 +115,10 @@
 
   ;-------------
   "fn-sample"
-  {"sym"  "sample-src.root\\sample-src.root\\fn-sample"
-  "ns"    "sample-src.root"
+  {"sym"  "test-src.root\\test-src.root\\fn-sample"
+  "ns"    "test-src.root"
   "pos"   #(1 7)
-  "scope" "sample-src.root"
+  "scope" "test-src.root"
   "type"  {"args" (hy.models.List)
            "decorators" None
            "docs" ""
@@ -122,7 +128,7 @@
   "uri"   (-> __file__ os.path.dirname (os.path.join "sample_src" "root.hy"))
   "docs"  (-> f"
   defn fn-sample None []
-  \t[sample-src.root]"
+  \t[test-src.root]"
   dedent .strip (+ "\n\n"))}
   })
 
