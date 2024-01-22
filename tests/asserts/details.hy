@@ -48,11 +48,11 @@
   "str-sample"
   {"sym"  "doc\\doc\\str-sample"
   "ns"    "doc"
-  "pos"   #(13 7)
+  "pos"   #(7 7)
   "scope" "doc"
   "type"  {"docs" "\"sample value\""
            "name" "str-sample"
-           "pos" #(13 7)
+           "pos" #(7 7)
            "type" "setv"
             "value" (hy.models.String "sample value")}
   "uri"   (str test-src-doc-path)
@@ -68,11 +68,11 @@
   "int-sample"
   {"sym"  "doc\\doc\\int-sample"
   "ns"    "doc"
-  "pos"   #(15 7)
+  "pos"   #(8 7)
   "scope" "doc"
   "type"  {"docs" "123"
            "name" "int-sample"
-           "pos" #(15 7)
+           "pos" #(8 7)
            "type" "setv"
             "value" (hy.models.Integer 123)}
   "uri"   (str test-src-doc-path)
@@ -88,11 +88,11 @@
   "dict-sample"
   {"sym"  "doc\\doc\\dict-sample"
   "ns"    "doc"
-  "pos"   #(17 7)
+  "pos"   #(9 7)
   "scope" "doc"
   "type"  {"docs" "{:key 12345}"
            "name" "dict-sample"
-           "pos" #(17 7)
+           "pos" #(9 7)
            "type" "setv"
             "value" (hy.models.Dict [(hy.models.Keyword "key")
                                      (hy.models.Integer 12345)])}
@@ -128,13 +128,13 @@
   "fn-sample"
   {"sym"  "doc\\doc\\fn-sample"
   "ns"    "doc"
-  "pos"   #(5 7)
+  "pos"   #(3 7)
   "scope" "doc"
   "type"  {"args" (hy.models.List)
            "decorators" None
            "docs" ""
            "name" "fn-sample"
-           "pos" #(5 7)
+           "pos" #(3 7)
            "type" "defn"}
   "uri"   (str test-src-doc-path)
   "docs"  (-> f"

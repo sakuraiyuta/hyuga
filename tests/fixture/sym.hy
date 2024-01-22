@@ -15,7 +15,7 @@
   (let [root-uri (str test-src-root-path)
         doc-uri (str test-src-doc-path)
         src (with [f (open doc-uri "r")]
-              (.join "\n" (f.readlines)))]
+              (.join "" (f.readlines)))]
     (parse-src! src root-uri doc-uri)
     {:src src
      :root-uri root-uri
