@@ -1,26 +1,13 @@
 (require hyrule * :readers *)
 
 (import builtins)
-(import toolz.itertoolz *)
 (import textwrap [dedent])
-(import pathlib [Path])
 
-(defn path->uri
-  [path [joins []]]
-  (let [joined (hy.eval `(.joinpath path ~@joins))]
-    (->> joined str (+ "file://"))))
-
-(setv test-src-path
-      (let [path (Path __file__)]
-        (-> (nth 1 path.parents)
-            (.joinpath "test_src"))))
-
-(setv root-path (-> test-src-path
-                    (.joinpath "root.hy")
-                    str))
+(import .path *)
+(import hyuga.sym.helper [sym-hy->py])
 
 (setv
-  vals
+  details
   ;-------------
   {"defn"
   {"sym"  "\\(hykwd)\\defn"
@@ -40,20 +27,38 @@
   }
 
   ;-------------
+  "defn/a"
+  {"sym"  "\\(hykwd)\\defn/a"
+  "ns"    "(hykwd)"
+  "pos"   None
+  "scope" ""
+  "type"  (get builtins._hy_macros (sym-hy->py "defn/a"))
+  "uri"   False
+  "docs"
+  (-> f"
+  defn/a [(hykwd)]
+  \t{(get builtins._hy_macros (sym-hy->py "defn/a"))}
+
+  No docs.
+  "
+  dedent .strip)
+  }
+
+  ;-------------
   "str-sample"
-  {"sym"  "root\\root\\str-sample"
-  "ns"    "root"
+  {"sym"  "doc\\doc\\str-sample"
+  "ns"    "doc"
   "pos"   #(13 7)
-  "scope" "root"
+  "scope" "doc"
   "type"  {"docs" "\"sample value\""
            "name" "str-sample"
            "pos" #(13 7)
            "type" "setv"
             "value" (hy.models.String "sample value")}
-  "uri"   root-path
+  "uri"   (str test-src-doc-path)
   "docs"  (-> f"
   setv str-sample
-  \t[root]
+  \t[doc]
   
   `\"sample value\"`
   "
@@ -61,19 +66,19 @@
 
   ;-------------
   "int-sample"
-  {"sym"  "root\\root\\int-sample"
-  "ns"    "root"
+  {"sym"  "doc\\doc\\int-sample"
+  "ns"    "doc"
   "pos"   #(15 7)
-  "scope" "root"
+  "scope" "doc"
   "type"  {"docs" "123"
            "name" "int-sample"
            "pos" #(15 7)
            "type" "setv"
             "value" (hy.models.Integer 123)}
-  "uri"   root-path
+  "uri"   (str test-src-doc-path)
   "docs"  (-> f"
   setv int-sample
-  \t[root]
+  \t[doc]
   
   `123`
   "
@@ -81,20 +86,20 @@
 
   ;-------------
   "dict-sample"
-  {"sym"  "root\\root\\dict-sample"
-  "ns"    "root"
+  {"sym"  "doc\\doc\\dict-sample"
+  "ns"    "doc"
   "pos"   #(17 7)
-  "scope" "root"
+  "scope" "doc"
   "type"  {"docs" "{:key 12345}"
            "name" "dict-sample"
            "pos" #(17 7)
            "type" "setv"
             "value" (hy.models.Dict [(hy.models.Keyword "key")
                                      (hy.models.Integer 12345)])}
-  "uri"   root-path
+  "uri"   (str test-src-doc-path)
   "docs"  (-> "
   setv dict-sample
-  \t[root]
+  \t[doc]
   
   `{:key 12345}`
   "
@@ -121,19 +126,19 @@
 
   ;-------------
   "fn-sample"
-  {"sym"  "root\\root\\fn-sample"
-  "ns"    "root"
+  {"sym"  "doc\\doc\\fn-sample"
+  "ns"    "doc"
   "pos"   #(5 7)
-  "scope" "root"
+  "scope" "doc"
   "type"  {"args" (hy.models.List)
            "decorators" None
            "docs" ""
            "name" "fn-sample"
            "pos" #(5 7)
            "type" "defn"}
-  "uri"   root-path
+  "uri"   (str test-src-doc-path)
   "docs"  (-> f"
   defn fn-sample None []
-  \t[root]"
+  \t[doc]"
   dedent .strip (+ "\n\n"))}
   })

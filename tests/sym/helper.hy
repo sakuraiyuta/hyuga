@@ -4,25 +4,18 @@
 (import pytest)
 (import pathlib [Path])
 
-(import ..define [test-src-path
-                  path->uri])
+(import ..asserts.path *)
 (import hyuga.sym.helper *)
-
-(setv test-root-uri
-      (path->uri test-src-path))
-
-(setv root-hy-uri
-      (path->uri test-src-path ["root.hy"]))
 
 (defn [(pytest.mark.parametrize
          #("root_uri" "doc_uri" "expected")
          [
-          #(test-root-uri root-hy-uri "root")
-          #(test-root-uri
-             (path->uri test-src-path ["regular" "alpha_module.hy"])
+          #(test-src-root-uri test-src-doc-uri "doc")
+          #(test-src-root-uri
+             (path->uri test-src-root-path ["regular" "alpha_module.hy"])
              "regular.alpha-module")
-          #(test-root-uri 
-             (path->uri test-src-path ["regular" "bravo" "bravo_module.hy"])
+          #(test-src-root-uri 
+             (path->uri test-src-root-path ["regular" "bravo" "bravo_module.hy"])
             "regular.bravo.bravo-module")
           ])]
   test_uri__mod
