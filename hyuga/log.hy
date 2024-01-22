@@ -1,12 +1,20 @@
 (import logging)
 (import traceback)
 (import os.path)
+(import os [environ])
 (import tempfile)
 
-(logging.basicConfig :level logging.INFO
-                     :format "%(levelname)-9s %(asctime)s [%(name)s] %(message)s"
-                     :filename (os.path.join (tempfile.gettempdir) "hyuga.log"))
-(setv logger (logging.getLogger "hyuga"))
+(setv logger
+      (let [logger (logging.getLogger "hyuga")
+            handler (logging.FileHandler
+                      :filename (os.path.join (tempfile.gettempdir)
+                                              "hyuga.log"))
+            formatter (logging.Formatter
+                        "%(levelname)-9s %(asctime)s [%(name)s] %(message)s")]
+        (logger.setLevel (.upper (.get environ "HYUGA_LOGLEVEL" "INFO")))
+        (handler.setFormatter formatter)
+        (logger.addHandler handler)
+        logger))
 
 (defn error-trace
   [logfn msg e]

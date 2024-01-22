@@ -1,25 +1,39 @@
 (require hyrule * :readers *)
 (import hyrule.iterables [drop-last distinct])
 
-(import os.path [dirname])
+(import urllib.parse [urlparse])
+(import pkgutil)
+(import pathlib [Path])
 (import inspect [getmodulename])
 (import toolz.itertoolz *)
 (import builtins)
 
 (import hyuga.log *)
 (import hyuga.global [$GLOBAL])
+(import .eval [eval-in!])
+(import hyuga.sym.module *)
 
 (defn uri->mod
   [root-uri doc-uri]
-  ;; TODO: replace to package loader
-  (let [submod (getmodulename doc-uri)]
-    (-> doc-uri
-        (.replace root-uri "")
-        (.lstrip "/")
-        dirname
-        (.replace "/" ".")
-        (+ f".{submod}")
-        sym-py->hy)))
+  (let [root-path (-> root-uri urlparse (get 2))
+        doc-path (-> doc-uri urlparse (get 2))
+        doc-path-obj (Path doc-path)
+        spec/parents (get-specs-recur root-path [] [])
+        filtered (->> spec/parents
+                      (filter #%(let [spec (first %1)]
+                                  (= doc-path spec.origin)))
+                      list)
+        py-name (if (> (len filtered) 0)
+                  (as-> filtered it
+                    (first it)
+                    (+ (-> "." (.join (second it)))
+                       "."
+                       (let [spec (first it)]
+                         spec.name))
+                    (.strip it "."))
+                  (let [fname doc-path-obj.stem]
+                    f"{fname}"))]
+    (sym-py->hy py-name)))
 
 (defn fix-hy-symbol
   [form]

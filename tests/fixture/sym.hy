@@ -12,7 +12,9 @@
   []
   ($GLOBAL.clean-$SYMS)
   (let [path (Path __file__)
-        root-uri (-> (nth 2 path.parents) str)
+        root-uri (-> (nth 2 path.parents)
+                    (.joinpath "test_src")
+                     str)
         doc-uri (-> (nth 2 path.parents)
                     (.joinpath "test_src" "root.hy")
                     str)

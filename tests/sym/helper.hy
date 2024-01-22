@@ -2,21 +2,29 @@
 (import hyrule.hypprint [pp])
 
 (import pytest)
+(import pathlib [Path])
 
+(import ..define [test-src-path
+                  path->uri])
 (import hyuga.sym.helper *)
+
+(setv test-root-uri
+      (path->uri test-src-path))
+
+(setv root-hy-uri
+      (path->uri test-src-path ["root.hy"]))
 
 (defn [(pytest.mark.parametrize
          #("root_uri" "doc_uri" "expected")
-         [#(
-            "file:///home/yuta/git/hyuga"
-            "file:///home/yuta/git/hyuga/hyuga/sym/spec.hy"
-            "hyuga.sym.spec"
-            )
-          #(
-            "file:///dummy"
-            "file:///home/yuta/git/hyuga/hyuga/sym/spec.hy"
-            "file:...home.yuta.git.hyuga.hyuga.sym.spec"
-            )])]
+         [
+          #(test-root-uri root-hy-uri "root")
+          #(test-root-uri
+             (path->uri test-src-path ["regular" "alpha_module.hy"])
+             "regular.alpha-module")
+          #(test-root-uri 
+             (path->uri test-src-path ["regular" "bravo" "bravo_module.hy"])
+            "regular.bravo.bravo-module")
+          ])]
   test_uri__mod
   [root_uri doc_uri expected]
   (let [result (uri->mod root_uri doc_uri)]
