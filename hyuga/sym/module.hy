@@ -52,19 +52,19 @@
                         list)
         recur-result
         (as-> specs it
-             (filter #%(return %1.submodule_search_locations) it)
-             (map #%(let [ps %1.submodule_search_locations]
-                      (->> ps
-                           (map (fn [p]
-                                  (get-specs-recur
-                                    p
-                                    cur-result
-                                    (+ parents [%1.name]))))
-                           (reduce (fn [x y]
-                                     (+ x y)))
-                           list)) it)
-             (reduce #%(+ %1 %2) it [[]])
-             (list it))]
+          (filter #%(return %1.submodule_search_locations) it)
+          (map #%(let [ps %1.submodule_search_locations]
+                   (->> ps
+                        (map (fn [p]
+                               (get-specs-recur
+                                 p
+                                 cur-result
+                                 (+ parents [%1.name]))))
+                        (reduce (fn [x y]
+                                  (+ x y)))
+                        list)) it)
+          (reduce #%(+ %1 %2) it [[]])
+          (list it))]
     (->> (+ cur-result (or recur-result [[]]) ret)
          (filter #%(< 0 (len %1)))
          list)))

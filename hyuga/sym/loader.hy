@@ -26,7 +26,7 @@
 
 (defn load-sym!
   [ns syms [pos None] [uri None] [recur? False] [scope ""]]
-  (->> syms
+  (->> syms list ;; for avoid `RuntimeError: dictionary changed size during iteration`
        (filter-add-targets ns scope uri recur?)
        (map #%(add-sym! %1 ns pos uri scope))
        tuple))
@@ -248,8 +248,7 @@
     "(sysenv)"
     (->> modules .items
          (filter #%(and (not (.startswith (first %1) "hyuga.sym.dummy"))
-                        (not (in f"(venv)\\{%1}" (->> ($GLOBAL.get-$SYMS) .keys)))
-                        (not (.startswith (first %1) "_")))))))
+                        (not (in f"(venv)\\{%1}" (->> ($GLOBAL.get-$SYMS) .keys))))))))
 
 (defn load-venv!
   [root-uri]
