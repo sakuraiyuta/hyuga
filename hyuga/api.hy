@@ -10,8 +10,8 @@
 (import hyuga.sym.helper *)
 
 (defn in-scope?
-  [load-ns search-names]
-  (in load-ns (+ ["(builtin)" "(hykwd)" "(sysenv)"] search-names)))
+  [load-scope search-names]
+  (in load-scope (+ ["(builtin)" "(hykwd)" "(sysenv)"] search-names)))
 
 (defn parse-src!
   [src root-uri doc-uri]
@@ -92,15 +92,17 @@
   [tgt-full-sym root-uri doc-uri]
   "TODO: doc"
   ;; TODO: bugfix
-  (logger.debug f"get-matches tgt-sym={tgt-full-sym}")
   (let [tgt-ns (uri->mod root-uri doc-uri)
         filter-fn
         #%(let [[load-scope load-ns load-sym]
                 (get-scope/ns/sym (first %1))]
-            (or (and (in-scope? load-ns [tgt-ns])
+            (or (and (in-scope? load-scope [tgt-ns])
                      (= load-sym tgt-full-sym))
                 (and (= tgt-ns load-ns)
-                     (= load-sym tgt-full-sym))))]
+                     (= load-sym tgt-full-sym))
+                (and (= load-sym tgt-full-sym)
+                     (= load-ns tgt-full-sym))))]
+    (logger.debug f"get-matches tgt-full-sym={tgt-full-sym}, tgt-ns={tgt-ns}")
     (->> ($GLOBAL.get-$SYMS) .items
          ;; TODO: jump by module name(e.g. sym-tgt=hyrule.collections)
          (filter filter-fn)

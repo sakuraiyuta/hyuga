@@ -19,22 +19,30 @@
 
 (setv $SERVER (LanguageServer :name __package__ :version (get-version)))
 
+(defn get-params-dict
+  [$SERVER params]
+  (let [uri params.text_document.uri
+        src (-> uri
+                $SERVER.workspace.get_document
+                (getattr "source"))
+        pos #(params.position.line params.position.character)]
+    {"root-uri" $SERVER.workspace.root-uri
+     "doc-uri" params.text_document.uri
+     "src" src
+     "pos" pos}))
+
 (defn [($SERVER.feature
          TEXT_DOCUMENT_COMPLETION
-         :options (CompletionOptions :trigger-characters ["." " "]))] completion
+         :options (CompletionOptions :trigger-characters ["."]))] completion
   [params]
   "`textDocument/completion` request handler."
-  ;; TODO: check LSP spec(get word and return CompletionItem with prop TextEdit)
   (try
-    (let [word (cursor-word $SERVER
-                            params.text_document.uri
-                            params.position.line
-                            params.position.character)]
-      (logger.info f"completion word={(repr word)}")
+    (let+ [{src "src" [ln cn] "pos" root-uri "root-uri" doc-uri "doc-uri"}
+           (get-params-dict $SERVER params)
+           word (cursor-word src ln cn)]
+      (logger.info f"completion word={(repr word)} pos=#({ln}, {cn})")
       (if (is-not word None)
-        (->> (create-items word
-                           $SERVER.workspace.root_uri
-                           params.text_document.uri)
+        (->> (create-items word ln cn root-uri doc-uri)
              create-completion-list)
         (create-completion-list [])))
     (except [e Exception]
@@ -46,15 +54,12 @@
   "`textDocument/hover` request handler."
   ;; FIXME: only match in context
   (try
-    (let [word (cursor-word-all $SERVER
-                                params.text_document.uri
-                                params.position.line
-                                params.position.character)]
+    (let+ [{src "src" [ln cn] "pos" root-uri "root-uri" doc-uri "doc-uri"}
+           (get-params-dict $SERVER params)
+           word (cursor-word-all src ln cn)]
       (logger.info f"hover: word={word}")
       (when (is-not word None)
-        (let [details (-> word (get-details
-                                 $SERVER.workspace.root_uri
-                                 params.text_document.uri))]
+        (let [details (-> word (get-details root-uri doc-uri))]
           (when details
             (create-hover (:docs details))))))
     (except
@@ -65,15 +70,12 @@
 (defn [($SERVER.feature TEXT_DOCUMENT_DEFINITION)] definition
   [params]
   (try
-    (let [word (cursor-word-all $SERVER
-                                params.text_document.uri
-                                params.position.line
-                                params.position.character)]
+    (let+ [{src "src" [ln cn] "pos" root-uri "root-uri" doc-uri "doc-uri"}
+           (get-params-dict $SERVER params)
+           word (cursor-word-all src ln cn)]
       (logger.info f"definition: word={word}")
       (when (is-not word None)
-        (let [doc-uri params.text_document.uri
-              root-uri $SERVER.workspace.root_uri
-              matches (get-matches word root-uri doc-uri)
+        (let [matches (get-matches word root-uri doc-uri)
               locations (create-location-list matches)]
           (logger.debug f"locations={locations}")
           locations)))
@@ -112,7 +114,9 @@
                    params.text_document.uri)
                  True))
     (except [e Exception]
-      (log-error "did-change" e))))
+      (log-error "did-change" e))
+    (finally
+      None)))
 
 (defn start
   []

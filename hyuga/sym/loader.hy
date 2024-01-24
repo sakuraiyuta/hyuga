@@ -123,6 +123,10 @@
   (logger.debug f"load-import!: summary={summary}, ns={ns}, root-uri={root-uri}, doc-uri={doc-uri}, recur?={recur?}")
   (let+ [{name "name"} summary]
     (-> f"(import {name})" (hy.read) (eval-in!))
+    (let [mod (-> f"{name}" hy.read eval-in!)]
+      (load-sym! name #(#(name mod)) #(1 1)
+                 (+ "file://" mod.__file__) False ns))
+    
     (let [fname (hy-src? summary)]
       (if fname
         ;; TODO: fix loading definition other src's symbol

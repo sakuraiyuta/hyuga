@@ -8,6 +8,8 @@
                           CompletionOptions
                           CompletionParams
                           CompletionItemKind
+                          CompletionItemLabelDetails
+                          TextEdit
                           Hover
                           Range
                           Location
@@ -67,8 +69,17 @@
               else (decide-kind-by-type typev))
       (CompletionItemKind)))
 
+(defn create-text-edit
+  [word sym ln cn]
+  (let [start-pos
+        (Position :line ln
+                  :character (- cn (len word)))]
+    (TextEdit :new-text sym
+              :range (Range :start start-pos
+                            :end start-pos))))
+
 (defn create-item
-  [word full-sym/dic]
+  [word ln cn full-sym/dic]
   "TODO: doc"
   (let [[full-sym dic] full-sym/dic]
     (when (isinstance dic dict)
@@ -82,21 +93,27 @@
                             (-> ns
                                 (+ ".")
                                 (.replace word-ns "")
-                                (.lstrip "."))
+                                (.strip "."))
                             "")
-             insert-text sym
              label f"[{ns}] {sym}"]
         (CompletionItem
           :label label
-          :insert_text insert-text
-          :detail (fix-dummy docs)
+          :label-details (CompletionItemLabelDetails
+                           :detail label)
+          :insert-text (if (in "." word)
+                         fixed-prefix
+                         sym)
+          ;:text-edit (create-text-edit word sym ln cn)
+          :documentation (MarkupContent
+                           :kind MarkupKind.Markdown
+                           :value (fix-dummy docs))
           :kind (decide-kind scope typev))))))
 
 (defn create-items
-  [word root-uri doc-uri]
+  [word ln cn root-uri doc-uri]
   "TODO: doc"
   (->> (get-candidates word root-uri doc-uri)
-       (map #%(create-item word %1))
+       (map #%(create-item word ln cn %1))
        (filter #%(is-not None %1))
        list))
 
@@ -111,7 +128,7 @@
   [docs]
   (Hover
     :contents (MarkupContent
-                :kind MarkupKind.PlainText
+                :kind MarkupKind.Markdown
                 :value (fix-dummy docs))))
 
 (defn create-location
