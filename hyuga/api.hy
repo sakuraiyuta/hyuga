@@ -9,6 +9,10 @@
 (import hyuga.sym.loader *)
 (import hyuga.sym.helper *)
 
+(defn in-scope?
+  [load-ns search-names]
+  (in load-ns (+ ["(builtin)" "(hykwd)" "(sysenv)"] search-names)))
+
 (defn parse-src!
   [src root-uri doc-uri]
   "TODO: doc"
@@ -59,29 +63,27 @@
     "
     (logger.debug f"get-candidates: prefix={prefix}")
     (let [editting-mod (uri->mod root-uri doc-uri)
-          module-or-class (module-or-class? prefix)
+          inputting-ns (module-or-class? prefix)
           splitted (.split prefix ".")
-          sym-prefix (if module-or-class
+          tgt-sym-prefix (if inputting-ns
                        (last splitted)
                        prefix)
-          _ (when (and module-or-class
-                       (not sym-prefix))
-              (load-pymodule-syms! {"name" module-or-class}
-                                   doc-uri False))
+;          _ (when (and inputting-ns
+;                       (not tgt-sym-prefix))
+;              (load-pymodule-syms! {"name" inputting-ns}
+;                                   doc-uri False editting-mod))
           filter-fn
-          #%(let [full-sym (first %1)
-                  sym (get-sym full-sym)
-                  scope (-> %1 second (get "scope"))]
-              (and (in scope [editting-mod
-                              "(builtin)"
-                              "(hykwd)"
-                              "(sysenv)"
-                              "(venv)"
-                              module-or-class])
-                   (or (.startswith (get-ns full-sym) module-or-class)
-                       (.startswith scope module-or-class))
-                   (.startswith sym sym-prefix)))]
-      (logger.debug f"editting-mod={editting-mod}, module-or-class={module-or-class}, sym-prefix={sym-prefix}")
+          #%(let [load-full-sym (first %1)
+                  load-sym (get-sym load-full-sym)
+                  load-scope (-> %1 second (get "scope"))
+                  load-ns (-> %1 second (get "ns"))]
+              (and (or (and inputting-ns
+                            (.startswith load-ns f"{inputting-ns}.{tgt-sym-prefix}"))
+                       (and (not inputting-ns)
+                            (in-scope? load-scope [editting-mod inputting-ns])))
+                   (or (.startswith load-sym prefix)
+                       (.startswith load-sym tgt-sym-prefix))))]
+      (logger.debug f"editting-mod={editting-mod}, inputting-ns={inputting-ns}, tgt-sym-prefix={tgt-sym-prefix}")
       (->> ($GLOBAL.get-$SYMS) .items
            (filter filter-fn)
            tuple)))
@@ -91,16 +93,14 @@
   "TODO: doc"
   ;; TODO: bugfix
   (logger.debug f"get-matches tgt-sym={tgt-full-sym}")
-  (let [tgt-scope (uri->mod root-uri doc-uri)
-        tgt-sym (get-sym tgt-full-sym)
-        _ (logger.debug f"\ttgt-scope={tgt-scope}, tgt-sym={tgt-sym}")
+  (let [tgt-ns (uri->mod root-uri doc-uri)
         filter-fn
-        #%(let [[loaded-scope loaded-ns loaded-sym]
+        #%(let [[load-scope load-ns load-sym]
                 (get-scope/ns/sym (first %1))]
-            (or (= loaded-scope tgt-full-sym)
-                (= loaded-ns tgt-full-sym)
-                (and (= tgt-scope loaded-scope)
-                     (= loaded-sym tgt-sym))))]
+            (or (and (in-scope? load-ns [tgt-ns])
+                     (= load-sym tgt-full-sym))
+                (and (= tgt-ns load-ns)
+                     (= load-sym tgt-full-sym))))]
     (->> ($GLOBAL.get-$SYMS) .items
          ;; TODO: jump by module name(e.g. sym-tgt=hyrule.collections)
          (filter filter-fn)

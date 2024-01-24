@@ -2,6 +2,8 @@
 
 (import builtins)
 (import textwrap [dedent])
+(import sys)
+(import shutil)
 
 (import .path *)
 (import hyuga.sym.helper [sym-hy->py])
@@ -117,10 +119,28 @@
   vars [(builtin)]
   \t{(get (vars builtins) "vars")}
 
-  vars([object]) -> dictionary
+  Show vars.
 
   Without arguments, equivalent to locals().
   With an argument, equivalent to object.__dict__.
+  "
+  dedent .strip)}
+
+  ;-------------
+  "shutil"
+  {"sym"  "(sysenv)\\shutil\\shutil"
+  "ns"    "shutil"
+  "pos"   #(1 1)
+  "scope" "(sysenv)"
+  "type"  (get sys.modules "shutil")
+  "uri"   (-> (get sys.modules "shutil") (getattr "__file__"))
+  "docs"  (-> f"
+  shutil [shutil]
+  \t{(get sys.modules "shutil")}
+
+  Utility functions for copying and archiving files and directory trees.
+
+  XXX The functions here don't copy the resource fork or other metadata on Mac.
   "
   dedent .strip)}
 

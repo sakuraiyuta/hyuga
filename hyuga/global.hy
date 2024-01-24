@@ -19,10 +19,8 @@
     ;;  "pos" pos
     ;;  "uri" uri
     ;;  "docs" docs}
-    (let+ [{sym "sym" v "v" scope "scope"
-            pos "pos" docs "docs" uri "uri"} data]
-      (logger.debug
-        f"add-$SYMS: sym={sym}, scope={scope}, pos={pos}, uri={uri}")
+    (let+ [{sym "sym" v "v" scope "scope" ns "ns" pos "pos" docs "docs" uri "uri"} data]
+      (logger.debug f"add-$SYMS: sym={sym}, scope={scope}, ns={ns}, pos={pos}, uri={uri}")
       (assoc self.$SYMS sym data))
     data)
 

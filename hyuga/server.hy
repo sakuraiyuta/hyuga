@@ -24,6 +24,7 @@
          :options (CompletionOptions :trigger-characters ["." " "]))] completion
   [params]
   "`textDocument/completion` request handler."
+  ;; TODO: check LSP spec(get word and return CompletionItem with prop TextEdit)
   (try
     (let [word (cursor-word $SERVER
                             params.text_document.uri
@@ -111,8 +112,7 @@
                    params.text_document.uri)
                  True))
     (except [e Exception]
-      (log-error "did-change" e)
-      (raise e))))
+      (log-error "did-change" e))))
 
 (defn start
   []

@@ -103,7 +103,7 @@
 (defn create-completion-list
   [items [is-incomplete False]]
   "TODO: doc"
-  (logger.debug f"create-completion-list items={(count items)}")
+  (logger.debug f"create-completion-list items={items}")
   (CompletionList :is_incomplete is-incomplete
                   :items items))
 

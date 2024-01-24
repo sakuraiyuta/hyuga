@@ -37,7 +37,7 @@
             else f"unknown")
     (try
       (let [docs (or symtype.__doc__ "No docs.")]
-        f"{sym-hy} [{scope}]\n\t{(str symtype)}\n\n{docs}")
+        (-> f"{sym-hy} [{scope}]\n\t{(str symtype)}\n\n{docs}" .strip))
 
       (except
           [e BaseException]

@@ -42,8 +42,13 @@
                          (hasattr val "__file__")
                          val.__file__))]
     ($GLOBAL.add-$SYMS
-      {"sym" (get-full-sym scope ns sym-hy) "type" val "uri" doc-uri
-       "scope" scope "ns" ns "docs" docs "pos" pos})))
+      {"sym" (get-full-sym scope ns sym-hy)
+       "type" val
+       "uri" doc-uri
+       "scope" scope
+       "ns" ns
+       "docs" docs
+       "pos" pos})))
 
 (defn load-target?
   [form]
@@ -81,17 +86,15 @@
 (defn load-imported-pypkg!
   [summary ns doc-uri recur?]
   "TODO: doc"
-  (let+ [{name "name" pos "pos"
-          includes "includes"} summary
-         pypkg-items (-> f"{name}.__dict__"
-                         hy.read
+  (let+ [{name "name" pos "pos" includes "includes"} summary
+         pypkg-items (-> f"{name}.__dict__" hy.read
                          (eval-in! ns)
                          .items tuple)
          next-items (->> pypkg-items
                          filter-not-reserved
                          tuple)
          pypkg-ns (-> f"{name}.__name__"
-                      hy.read (eval-in! ns))
+         hy.read (eval-in! ns))
          filtered (cond
                     (= includes "*") next-items
                     (isinstance includes list)
@@ -104,14 +107,14 @@
     (load-sym! pypkg-ns filtered pos doc-uri recur? ns)))
 
 (defn load-pymodule-syms!
-  [summary doc-uri recur?]
+  [summary doc-uri recur? editting-mod]
   "TODO: doc"
   (logger.debug f"load-pymodule-syms! summary={summary}")
   (let+ [{name "name"} summary]
     (load-imported-pypkg! {"name" name
                            "pos" None
                            "includes" "*"}
-                          name
+                          editting-mod
                           doc-uri recur?)))
 
 (defn load-import!
@@ -244,11 +247,16 @@
   []
   "TODO: docs"
   ;; TODO: toggle enable/disable to list sys.modules #11
-  (load-sym!
-    "(sysenv)"
-    (->> modules .items
-         (filter #%(and (not (.startswith (first %1) "hyuga.sym.dummy"))
-                        (not (in f"(venv)\\{%1}" (->> ($GLOBAL.get-$SYMS) .keys))))))))
+  (->> modules .items
+       (filter #%(and (not (.startswith (first %1) "hyuga.sym.dummy"))
+                      (not (in f"(venv)\\{%1}" (->> ($GLOBAL.get-$SYMS) .keys)))))
+       (map #%(load-sym! (first %1)
+                         [[(first %1) (second %1)]]
+                         #(1 1)
+                         (getattr (second %1) "__file__" None)
+                         False
+                         "(sysenv)"))
+       tuple))
 
 (defn load-venv!
   [root-uri]

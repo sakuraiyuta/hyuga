@@ -24,8 +24,8 @@
 
 (defn [(pytest.mark.parametrize
          #("prefix" "expected")
-         [#("defn" (get-expected-candidates
-                     ["defn" "defn/a"]))])]
+         [#("defn" (get-expected-candidates ["defn" "defn/a"]))
+          #("shutil" (get-expected-candidates ["shutil"]))])]
   test_get_candidates
   [prefix expected fixture-syms]
   (let+ [{root-uri :root-uri

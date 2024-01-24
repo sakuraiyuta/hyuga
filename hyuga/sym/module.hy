@@ -6,6 +6,7 @@
 (import pathlib [Path])
 (import toolz.itertoolz *)
 (import hy.models [reduce])
+(import hy.pyops *)
 
 (import hyuga.sym.eval [eval-in!])
 (import hyuga.log *)
@@ -13,11 +14,6 @@
 (defn get-module-infos-recur
   [paths]
   (->> (pkgutil.walk-packages :path paths)
-       tuple))
-
-(defn get-module-infos
-  [paths]
-  (->> (pkgutil.iter-modules :path paths)
        tuple))
 
 (defn get-finder
@@ -34,19 +30,16 @@
 
 (defn get-specs
   [paths]
-  (->> (get-module-infos paths)
+  (->> (get-module-infos-recur paths)
        (map #%(return #(%1.name (get-finder %1))))
        (map #%(get-spec (second %1) (first %1)))
-       tuple))
+       list))
 
 (defn get-specs-recur
   [path ret parents]
   ;; TODO: cannot find namespace package
   ;; @see https://github.com/python/cpython/issues/73444
-  (let [specs (->> (get-module-infos-recur [path])
-                   (map #%(return #(%1.name (get-finder %1))))
-                   (map #%(get-spec (second %1) (first %1)))
-                   list)
+  (let [specs (get-specs [path])
         cur-result (->> specs
                         (map #%(return [%1 parents]))
                         list)
@@ -60,10 +53,9 @@
                                  p
                                  cur-result
                                  (+ parents [%1.name]))))
-                        (reduce (fn [x y]
-                                  (+ x y)))
+                        (reduce +)
                         list)) it)
-          (reduce #%(+ %1 %2) it [[]])
+          (reduce + it [[]])
           (list it))]
     (->> (+ cur-result (or recur-result [[]]) ret)
          (filter #%(< 0 (len %1)))
