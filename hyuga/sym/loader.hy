@@ -17,7 +17,7 @@
 (import .eval [eval-in!])
 (import .helper *)
 (import .spec *)
-(import .summary [get-form-summary])
+(import .summary.core [get-form-summary])
 (import .doc [create-docs])
 (import .filter [filter-add-targets
                           filter-not-reserved])
@@ -93,8 +93,7 @@
          next-items (->> pypkg-items
                          filter-not-reserved
                          tuple)
-         pypkg-ns (-> f"{name}.__name__"
-         hy.read (eval-in! ns))
+         pypkg-ns (-> f"{name}.__name__" hy.read (eval-in! ns))
          filtered (cond
                     (= includes "*") next-items
                     (isinstance includes list)
@@ -126,7 +125,7 @@
     (let [mod (-> f"{name}" hy.read eval-in!)]
       (load-sym! name #(#(name mod)) #(1 1)
                  (+ "file://" mod.__file__) False ns))
-    
+
     (let [fname (hy-src? summary)]
       (if fname
         ;; TODO: fix loading definition other src's symbol

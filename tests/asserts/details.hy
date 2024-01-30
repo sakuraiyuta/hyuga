@@ -115,16 +115,7 @@
   "scope" ""
   "type"  (get (vars builtins) "vars")
   "uri"   False
-  "docs"  (-> f"
-  vars [(builtin)]
-  \t{(get (vars builtins) "vars")}
-
-  Show vars.
-
-  Without arguments, equivalent to locals().
-  With an argument, equivalent to object.__dict__.
-  "
-  dedent .strip)}
+  "docs"  (-> f"vars [(builtin)]\n\t{(get (vars builtins) "vars")}\n\n{(vars.__doc__.strip)}" .strip)}
 
   ;-------------
   "shutil"
