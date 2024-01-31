@@ -21,8 +21,9 @@
             "defn"
             (let+ [{args "args"
                     decorators "decorators"
+                    argtypes "argtypes"
                     docs "docs"} symtype]
-              f"defn {sym-hy} {(fix-hy-symbol decorators)} {(fix-hy-symbol args)}\n\t[{scope}]\n\n{docs}")
+              f"<{scope}>\n\ndefn {(fix-hy-symbol decorators)} :tp {(fix-hy-symbol argtypes)} {sym-hy}\n\t{(fix-hy-symbol args)}\n\n{docs}")
 
             "setv"
             (let+ [{args "args"

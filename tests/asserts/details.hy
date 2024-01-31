@@ -142,14 +142,18 @@
   "pos"   #(3 7)
   "scope" "doc"
   "type"  {"args" (hy.models.List)
-           "decorators" None
+           "argtypes" (hy.models.List)
+           "decorators" (hy.models.List)
            "docs" ""
            "name" "fn-sample"
            "pos" #(3 7)
            "type" "defn"}
   "uri"   (str test-src-doc-path)
   "docs"  (-> f"
-  defn fn-sample None []
-  \t[doc]"
+  <doc>
+
+  defn [] :tp [] fn-sample
+  \t[]
+  "
   dedent .strip (+ "\n\n"))}
   })
