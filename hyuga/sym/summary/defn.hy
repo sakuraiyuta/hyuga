@@ -41,13 +41,12 @@
 ;; 7 hy.models.Symbol('None')])
 (defn get-summary
   [form]
-  (setv ret {"type" "defn"})
   (let [fixed-form (fix-defn-form form)]
-    (.update ret {"decorators" (second fixed-form)})
-    (.update ret {"argtypes" (nth 3 fixed-form)})
-    (.update ret {"name" (->> fixed-form (nth 4) fix-hy-symbol)})
-    (.update ret {"args" (nth 5 fixed-form)})
-    (.update ret {"docs" (->> (nth 6 fixed-form) str)})
-    (.update ret {"pos" #((getattr (nth 4 fixed-form) "start_line")
-                          (getattr (nth 4 fixed-form) "start_column"))}))
-  ret)
+    {"name" (->> fixed-form (nth 4) fix-hy-symbol)
+     "type" "defn"
+     "decorators" (second fixed-form)
+     "args" (nth 5 fixed-form)
+     "argtypes" (nth 3 fixed-form)
+     "docs" (->> (nth 6 fixed-form) str)
+     "pos" #((getattr (nth 4 fixed-form) "start_line")
+             (getattr (nth 4 fixed-form) "start_column"))}))
