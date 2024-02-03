@@ -21,7 +21,7 @@
 (import .doc [create-docs])
 (import .filter [filter-add-targets
                           filter-not-reserved])
-(import ..uri.helper [remove-uri-prefix get-venv])
+(import .venv [remove-uri-prefix get-venv])
 (import ..log *)
 
 (defn load-sym!

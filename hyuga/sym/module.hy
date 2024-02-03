@@ -3,7 +3,6 @@
 (import hyrule.iterables [flatten])
 (import urllib.parse [urlparse])
 (import pkgutil)
-(import pathlib [Path])
 (import toolz.itertoolz *)
 (import hy.models [reduce])
 (import hy.pyops *)
@@ -46,15 +45,14 @@
         recur-result
         (as-> specs it
           (filter #%(return %1.submodule_search_locations) it)
-          (map #%(let [ps %1.submodule_search_locations]
-                   (->> ps
-                        (map (fn [p]
-                               (get-specs-recur
-                                 p
-                                 cur-result
-                                 (+ parents [%1.name]))))
-                        (reduce +)
-                        list)) it)
+          (map #%(->> %1.submodule_search_locations
+                      (map (fn [p]
+                             (get-specs-recur
+                               p
+                               cur-result
+                               (+ parents [%1.name]))))
+                      (reduce +)
+                      list) it)
           (reduce + it [[]])
           (list it))]
     (->> (+ cur-result (or recur-result [[]]) ret)
