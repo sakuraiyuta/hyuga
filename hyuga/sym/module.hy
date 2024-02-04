@@ -30,6 +30,7 @@
 (defn get-specs
   [paths]
   (->> (get-module-infos-recur paths)
+       (filter #%(not (= %1.name "_distutils_hack")))
        (map #%(return #(%1.name (get-finder %1))))
        (map #%(get-spec (second %1) (first %1)))
        list))

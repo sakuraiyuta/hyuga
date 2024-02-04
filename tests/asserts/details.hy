@@ -136,6 +136,22 @@
   dedent .strip)}
 
   ;-------------
+  "iniconfig"
+  {"sym"  "(venv)\\iniconfig\\iniconfig"
+  "ns"    "iniconfig"
+  "pos"   #(1 1)
+  "scope" "(venv)"
+  "type"  None
+  "uri"   (-> (get sys.modules "iniconfig") (getattr "__file__"))
+  "docs"  (-> f"
+  iniconfig [iniconfig]
+  \tNone
+
+  No docs.
+  "
+  dedent .strip)}
+
+  ;-------------
   "fn-sample"
   {"sym"  "doc\\doc\\fn-sample"
   "ns"    "doc"

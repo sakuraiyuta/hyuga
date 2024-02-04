@@ -9,12 +9,16 @@
 
 (defn [(pytest.mark.parametrize
          #("full_sym" "expected")
-         [#("defn" (get details "defn"))
+         [
+          #("defn" (get details "defn"))
           #("vars" (get details "vars"))
+          #("iniconfig" (get details "iniconfig"))
           #("str-sample" (get details "str-sample"))
           #("int-sample" (get details "int-sample"))
           #("dict-sample" (get details "dict-sample"))
-          #("fn-sample" (get details "fn-sample"))])]
+          #("fn-sample" (get details "fn-sample"))
+          ])
+       ]
   test_get_details
   [full_sym expected fixture-syms]
   (let+ [{root-uri :root-uri
@@ -24,8 +28,10 @@
 
 (defn [(pytest.mark.parametrize
          #("prefix" "expected")
-         [#("defn" (get-expected-candidates ["defn" "defn/a"]))
-          #("shutil" (get-expected-candidates ["shutil"]))])]
+         [
+          #("defn" (get-expected-candidates ["defn" "defn/a"]))
+          #("shutil" (get-expected-candidates ["shutil"]))
+          ])]
   test_get_candidates
   [prefix expected fixture-syms]
   (let+ [{root-uri :root-uri

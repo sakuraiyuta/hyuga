@@ -20,8 +20,8 @@
   (when (= 0 (count ($GLOBAL.get-$SYMS)))
     (load-builtin!)
     (load-hy-kwd!)
-    (load-sys!)
-    (load-venv! root-uri))
+    (load-venv! root-uri)
+    (load-sys!))
   (load-src! src root-uri doc-uri (uri->mod root-uri doc-uri) True)
   (logger.debug f"parse-src!: finished. $SYMS.count={(count ($GLOBAL.get-$SYMS))}, root-uri={root-uri}, doc-uri={doc-uri}"))
 
@@ -43,7 +43,7 @@
                                       1 2))
                      tuple)]
     (if (> (count matches) 0)
-      (get ($GLOBAL.get-$SYMS) (:sym (first matches)))
+      (first matches)
       None)))
 
 (defn get-candidates

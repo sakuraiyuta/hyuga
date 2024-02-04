@@ -27,6 +27,7 @@
 (defn load-sym!
   [ns syms [pos None] [uri None] [recur? False] [scope ""]]
   (->> syms list ;; for avoid `RuntimeError: dictionary changed size during iteration`
+       ;; TODO: check load target is hy-src?
        (filter-add-targets ns scope uri recur?)
        (map #%(add-sym! %1 ns pos uri scope))
        tuple))
@@ -216,7 +217,8 @@
         (when (and ns
                    (eval-in! `(not (in ~root-path sys.path)) ns))
           (logger.debug f"\tadd sys.path and import self: root-path={root-path}, ns={ns}")
-          (load-sym! ns (get-modules-by-pkgutil root-path)))
+          ;(load-sym! ns (get-modules-by-pkgutil root-path))
+          )
 
         (except [e BaseException]
           (log-warn f"\tit seems not in namespace...skipping ns={ns}" e)
@@ -253,12 +255,14 @@
   (->> modules .items
        (filter #%(and (not (.startswith (first %1) "hyuga.sym.dummy"))
                       (not (in f"(venv)\\{%1}" (->> ($GLOBAL.get-$SYMS) .keys)))))
-       (map #%(load-sym! (first %1)
-                         [[(first %1) (second %1)]]
-                         #(1 1)
-                         (getattr (second %1) "__file__" None)
-                         False
-                         "(sysenv)"))
+       (map #%(let [name (first %1)
+                    entity (second %1)]
+                (load-sym! name
+                          [[name entity]]
+                          #(1 1)
+                          (getattr entity "__file__" None)
+                          entity
+                          "(sysenv)")))
        tuple))
 
 (defn load-venv!
@@ -268,35 +272,16 @@
   (let [venv-path (get-venv root-uri)]
     (logger.debug f"load-venv! venv-path={venv-path}")
     (when (isdir venv-path)
-      (logger.debug f"\tget-module-specs={(get-module-specs venv-path)}")
-      (eval-in! `(import sys pkgutil))
-      (load-sym! "(venv)" (get-modules-by-pkgutil venv-path)))))
-
-(defn get-modules-by-pkgutil
-  [path]
-  (logger.debug f"get-modules-by-pkgutil path={path}")
-  (let [prev-sys-path (eval-in! `sys.path)
-        _ (eval-in! `(sys.path.insert 0 ~path))
-
-        filter-fn
-        #%(and (not (.startswith %1 "_"))
-               ;; FIXME: importing pip causes distutils AssertionError.
-               ;; @see https://github.com/pypa/setuptools/issues/3297
-               (not (= %1 "pip"))
-               (not (in f"(sysenv)\\{%1}" (->> ($GLOBAL.get-$SYMS) .keys))))
-
-        ret (->> `(pkgutil.iter-modules :path [~path])
-                 eval-in!
-                 (map #%(. %1 name))
-                 (filter filter-fn)
-                 (map #%(return
-                          #(%1 (-> `(-> ~%1
-                                        pkgutil.get-loader
-                                        .load-module)
-                                   eval-in!))))
-                 tuple)]
-    (eval-in! `(setv sys.path ~prev-sys-path))
-    ret))
+      (let [specs (get-specs [venv-path])]
+        (->> specs
+             (map #%(load-sym! %1.name
+                                 [[%1.name None]]
+                                 #(1 1)
+                                 %1.origin
+                                 %1
+                                 "(venv)"))
+             tuple)
+        ))))
 
 (defn load-required-macros!
   [summary ns doc-uri recur?]
