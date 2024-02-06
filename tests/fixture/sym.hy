@@ -19,4 +19,5 @@
     (parse-src! src root-uri doc-uri)
     {:src src
      :root-uri root-uri
-     :doc-uri doc-uri}))
+     :doc-uri doc-uri
+     :syms ($GLOBAL.get-$SYMS)}))

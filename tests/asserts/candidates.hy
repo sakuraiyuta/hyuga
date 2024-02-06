@@ -17,6 +17,7 @@
 (defn get-expected-candidates
   [syms]
   (->> syms
-       (map #%(return #((-> candidates (get %1) (get "sym"))
-                        (get candidates %1))))
+       (map #%(let+ [{sym "sym" ns "ns" scope "scope"}
+                     (get candidates %1)]
+                #(f"{scope}\\{ns}\\{sym}" (get candidates %1))))
        tuple))

@@ -16,6 +16,7 @@
              "includes" None})
   (let [options (list (drop 2 form))]
     ;; TODO: multiple import support(e.g. (import a.b x.y))
+    ;; TODO: relative import support(e.g. (import ..x))
     (when (-> options count (> 0))
       (let [option (first options)]
         (if (isinstance option List)

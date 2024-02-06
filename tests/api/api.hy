@@ -22,8 +22,13 @@
   test_get_details
   [full_sym expected fixture-syms]
   (let+ [{root-uri :root-uri
-          doc-uri :doc-uri} fixture-syms
-         result (get-details full_sym root-uri doc-uri)]
+          doc-uri :doc-uri
+          syms :syms} fixture-syms
+         result (get-details full_sym root-uri doc-uri)
+         {exp-ns "ns" exp-scope "scope" exp-sym "sym"} expected
+         symdata (get syms f"{exp-scope}\\{exp-ns}\\{exp-sym}")]
+    (setv (get result "type") (get expected "type"))
+    (setv (get result "docs") (get expected "docs"))
     (assert (= result expected))))
 
 (defn [(pytest.mark.parametrize

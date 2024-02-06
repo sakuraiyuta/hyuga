@@ -1,10 +1,20 @@
 (require hyrule * :readers *)
 
 (import hyrule.hypprint [pformat])
+(import importlib.machinery [ModuleSpec])
+(import ast [get-docstring])
 
 (import hyuga.log *)
 (import hyuga.sym.helper *)
 (import hyuga.sym.eval [eval-in!])
+(import hyuga.sym.module *)
+
+(defn get-doc-from-spec
+  [spec]
+  (when (and (not (spec-is-hy? spec))
+             (spec-is-py? spec))
+    (let [ast (get-ast spec)]
+    (get-docstring ast))))
 
 (defn create-docs
   [sym-hy symtype scope uri]
@@ -37,7 +47,9 @@
 
             else f"unknown")
     (try
-      (let [docs (or symtype.__doc__ "No docs.")]
+      (let [docs (if (isinstance symtype ModuleSpec)
+                   (get-doc-from-spec symtype)
+                   (or symtype.__doc__ "No docs."))]
         (-> f"{sym-hy} [{scope}]\n\t{(str symtype)}\n\n{docs}" .strip))
 
       (except

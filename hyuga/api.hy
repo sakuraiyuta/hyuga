@@ -74,7 +74,7 @@
 ;                                   doc-uri False editting-mod))
           filter-fn
           #%(let [load-full-sym (first %1)
-                  load-sym (get-sym load-full-sym)
+                  load-sym (-> %1 second (get "sym"))
                   load-scope (-> %1 second (get "scope"))
                   load-ns (-> %1 second (get "ns"))]
               (and (or (and inputting-ns

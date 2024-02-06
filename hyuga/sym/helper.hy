@@ -20,16 +20,16 @@
         doc-path-obj (Path doc-path)
         spec/parents (get-specs-recur root-path [] [])
         filtered (->> spec/parents
-                      (filter #%(let [spec (first %1)]
-                                  (= doc-path spec.origin)))
-                      list)
+                      (filter #%(= doc-path
+                                   (-> %1 first
+                                       (getattr "origin"))))
+                      tuple)
         py-name (if (> (len filtered) 0)
                   (as-> filtered it
                     (first it)
                     (+ (-> "." (.join (second it)))
                        "."
-                       (let [spec (first it)]
-                         spec.name))
+                       (-> it first (getattr "name")))
                     (.strip it "."))
                   (let [fname doc-path-obj.stem]
                     f"{fname}"))]

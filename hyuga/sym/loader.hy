@@ -13,6 +13,7 @@
 (import functools [partial])
 (import pkgutil [iter_modules get_loader])
 (import types [ModuleType])
+(import importlib.machinery [ModuleSpec])
 
 (import .eval [eval-in!])
 (import .helper *)
@@ -20,13 +21,13 @@
 (import .summary.core [get-form-summary])
 (import .doc [create-docs])
 (import .filter [filter-add-targets
-                          filter-not-reserved])
+                 filter-not-reserved])
 (import .venv [remove-uri-prefix get-venv])
 (import ..log *)
 
 (defn load-sym!
   [ns syms [pos None] [uri None] [recur? False] [scope ""]]
-  (->> syms list ;; for avoid `RuntimeError: dictionary changed size during iteration`
+  (->> syms tuple ;; for avoid `RuntimeError: dictionary changed size during iteration`
        ;; TODO: check load target is hy-src?
        (filter-add-targets ns scope uri recur?)
        (map #%(add-sym! %1 ns pos uri scope))
@@ -43,7 +44,7 @@
                          (hasattr val "__file__")
                          val.__file__))]
     ($GLOBAL.add-$SYMS
-      {"sym" (get-full-sym scope ns sym-hy)
+      {"sym" sym-hy
        "type" val
        "uri" doc-uri
        "scope" scope
@@ -75,26 +76,30 @@
   [summary]
   "TODO: doc"
   (logger.debug f"hy-src? summary={summary}")
-  (let [name (:name summary)]
-    (when (and (-> f"(hasattr {name} \"__dict__\")" hy.read eval-in!)
-               (-> f"(hasattr {name} \"__file__\")" hy.read eval-in!)
-               (-> f"(in \"__builtins__\" ({name}.__dict__.keys))" hy.read eval-in!)
-               (-> f"(in \"__hy_injected__\" (-> {name}.__dict__ (get \"__builtins__\") .keys))" hy.read eval-in!)
-               (-> f"(get {name}.__dict__ \"__builtins__\" \"__hy_injected__\")" hy.read eval-in!)
-               (re.search r".hy[c]*$" (-> f"{name}.__file__" hy.read eval-in!)))
-      (-> f"{name}.__file__" hy.read eval-in!))))
+  (let [name (:name summary)
+        mod-spec (find-loaded-spec {:sym name})
+        mod (when mod-spec (get-module mod-spec))]
+    (when (and mod
+               (hasattr mod "__file__")
+               (in "__hy_injected__" (-> mod dir))
+               (re.search r".hy[c]*$" mod.__file__))
+      mod.__file__)))
 
 (defn load-imported-pypkg!
   [summary ns doc-uri recur?]
   "TODO: doc"
+  ;; TODO: use Python AST
   (let+ [{name "name" pos "pos" includes "includes"} summary
-         pypkg-items (-> f"{name}.__dict__" hy.read
-                         (eval-in! ns)
-                         .items tuple)
+         _ (logger.debug f"trying to load pypkg syms. name={name}, includes={includes}, ns={ns}, doc-uri={doc-uri}, recur?={recur?}")
+         spec (find-loaded-spec {:sym name
+                                 :ns name})
+         pypkg-items (-> (find-loaded-spec {:sym name
+                                            :ns name})
+                         get-module
+                         vars .items)
          next-items (->> pypkg-items
                          filter-not-reserved
                          tuple)
-         pypkg-ns (-> f"{name}.__name__" hy.read (eval-in! ns))
          filtered (cond
                     (= includes "*") next-items
                     (isinstance includes list)
@@ -102,9 +107,7 @@
                          (filter #%(in (first %1) includes))
                          tuple)
                     True #())]
-    ;; TODO: check imported syms in pypkg.(candidates can't find all syms...use getattr?)
-    (logger.debug f"trying to load pypkg syms. name={name}, includes={includes}, pypkg-ns={pypkg-ns}, ns={ns}, doc-uri={doc-uri}, recur?={recur?}")
-    (load-sym! pypkg-ns filtered pos doc-uri recur? ns)))
+    (load-sym! name filtered pos doc-uri recur? ns)))
 
 (defn load-pymodule-syms!
   [summary doc-uri recur? editting-mod]
@@ -121,17 +124,24 @@
   [form summary ns root-uri doc-uri recur?]
   "TODO: doc"
   (logger.debug f"load-import!: summary={summary}, ns={ns}, root-uri={root-uri}, doc-uri={doc-uri}, recur?={recur?}")
-  (let+ [{name "name"} summary]
-    (-> f"(import {name})" (hy.read) (eval-in!))
-    (let [mod (-> f"{name}" hy.read eval-in!)]
-      (load-sym! name #(#(name mod)) #(1 1)
-                 (+ "file://" mod.__file__) False ns))
-
-    (let [fname (hy-src? summary)]
-      (if fname
-        ;; TODO: fix loading definition other src's symbol
-        (load-hy-src! form fname root-uri name)
-        (load-imported-pypkg! summary ns doc-uri recur?)))))
+  (let+ [{name "name" uri "uri"} summary]
+    (try
+      (let [mod-spec (or (find-loaded-spec {:sym name :ns name})
+                         (get-spec-by-name name))
+            mod (get-module mod-spec)
+            fname (mod-is-hy? mod)]
+        (load-sym! name (-> mod vars .items) #(1 1)
+                   (if (hasattr mod "__file__")
+                     mod.__file__
+                     None)
+                   False
+                   ns)
+        (if fname
+          ;; TODO: fix loading definition other src's symbol
+          (load-hy-src! form fname root-uri name)
+          (load-imported-pypkg! summary ns doc-uri recur?)))
+      (except [e BaseException]
+        (log-error "load-import" e)))))
 
 (defn load-class-methods!
   [ns name doc-uri summary recur?]
@@ -154,8 +164,6 @@
            ns (or ns (uri->mod root-uri doc-uri))
            {pos "pos" hytype "type" name "name"} summary]
       (logger.debug f"analyze-form!: summary={hytype}/{name}, doc-uri={doc-uri}, ns={ns}, recur?={recur?}")
-      (when (= "defmacro" hytype)
-        (load-macro! name ns pos doc-uri recur?))
       (when (= "require" hytype)
         (eval-in! form))
       (when (and (or (= "require" hytype)
@@ -163,12 +171,9 @@
                  need-import?)
         (load-import! form summary ns
                       root-uri doc-uri recur?))
-      (when (and need-import?
-                 (or (= "defreader" hytype)
-                     (= "require" hytype)))
-        (load-required-macros! summary ns doc-uri recur?))
       (when (or (.startswith hytype "def")
-                (= hytype "setv"))
+                (= hytype "setv")
+                (= hytype "setx"))
         (load-sym! ns
                    #(#(name summary))
                    pos doc-uri recur? ns))
@@ -239,23 +244,27 @@
   []
   "TODO: docs"
   (eval-in! `(import builtins))
-  (->> `(.items (vars builtins))
-       eval-in!
-       (load-sym! "(builtin)")))
+  (as-> `(.items (vars builtins)) it
+       (eval-in! it)
+       (load-sym! "(builtin)" it
+                  None None False "(builtin)")))
 
 (defn load-hy-kwd!
   []
   "TODO: docs"
-  (load-sym! "(hykwd)" (get-hy-macros)))
+  (load-sym! "(hykwd)" (get-hy-macros)
+             None None False "(hykwd)"))
 
 (defn load-sys!
   []
   "TODO: docs"
   ;; TODO: toggle enable/disable to list sys.modules #11
   (->> modules .items
-       (filter #%(and (not (.startswith (first %1) "hyuga.sym.dummy"))
-                      (not (in f"(venv)\\{%1}" (->> ($GLOBAL.get-$SYMS) .keys)))))
-       (map #%(let [name (first %1)
+       (filter #%(let [name (-> %1 first sym-py->hy)]
+                   (not (find-loaded-spec {:sym name
+                                           :ns name
+                                           :scope "(venv)"}))))
+       (map #%(let [name (-> %1 first sym-py->hy)
                     entity (second %1)]
                 (load-sym! name
                           [[name entity]]
@@ -272,33 +281,15 @@
   (let [venv-path (get-venv root-uri)]
     (logger.debug f"load-venv! venv-path={venv-path}")
     (when (isdir venv-path)
-      (let [specs (get-specs [venv-path])]
-        (->> specs
-             (map #%(load-sym! %1.name
-                                 [[%1.name None]]
-                                 #(1 1)
-                                 %1.origin
-                                 %1
-                                 "(venv)"))
-             tuple)
-        ))))
-
-(defn load-required-macros!
-  [summary ns doc-uri recur?]
-  "TODO: doc"
-  (let+ [{name "name" pos "pos"} summary
-         items (-> f"({name}._hy_macros.items)" hy.read (eval-in! ns))
-         filtered (->> items filter-not-reserved tuple)]
-    (logger.debug f"load-required-macros! summary={summary}, ns={ns}, doc-uri={doc-uri}, recur?={recur?}")
-    (load-sym! name filtered pos doc-uri recur? ns)))
-
-(defn load-macro!
-  [name ns pos uri recur?]
-  "TODO: doc"
-  (logger.debug f"load-macro! name={name}, ns={ns}, uri={uri}, recur?={recur?}")
-  (let [items (-> f"({ns}._hy_macros.items)"
-                  (hy.read)
-                  (eval-in! ns))
-        matched (->> items
-                     (filter #%(= name (first %1))))]
-    (load-sym! ns matched pos uri recur? ns)))
+      (->> (get-specs [venv-path])
+           (filter #%(let [name (-> %1.name sym-py->hy)]
+                       (not (find-loaded-spec {:sym name
+                                               :ns name
+                                               :scope "(sysenv)"}))))
+           (map #%(load-sym! (sym-py->hy %1.name)
+                             [[%1.name %1]]
+                             #(1 1)
+                             %1.origin
+                             %1
+                             "(venv)"))
+           tuple))))
