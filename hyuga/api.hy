@@ -1,5 +1,6 @@
 (require hyrule * :readers *)
 (import hyrule.iterables [butlast drop-last])
+(require hyrule.argmove [-> ->>])
 
 (import toolz.itertoolz *)
 (import functools [partial])

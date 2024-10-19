@@ -1,4 +1,5 @@
 (require hyrule * :readers *)
+(require hyrule.argmove [-> ->>])
 (import hyrule.collections [walk])
 
 (import hy.models [Expression List String])

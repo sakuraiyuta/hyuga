@@ -1,4 +1,5 @@
 (require hyrule * :readers *)
+(require hyrule.argmove [-> ->>])
 (import toolz.itertoolz *)
 (import lsprotocol.types [TEXT_DOCUMENT_COMPLETION
                           TEXT_DOCUMENT_HOVER

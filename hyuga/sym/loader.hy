@@ -1,5 +1,6 @@
 (require hyrule * :readers *)
-(require hyrule.collections [assoc])
+(require hyrule.argmove [-> ->>])
+(import hyrule.collections [assoc])
 (import hyrule.collections [walk])
 
 (import hy.reserved [names :as hy-specials])

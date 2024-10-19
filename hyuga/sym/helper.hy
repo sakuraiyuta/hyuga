@@ -1,4 +1,5 @@
 (require hyrule * :readers *)
+(require hyrule.argmove [-> ->>])
 (import hyrule.iterables [drop-last])
 
 (import os.path [dirname])
