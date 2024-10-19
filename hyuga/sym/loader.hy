@@ -272,8 +272,7 @@
 (defn load-hy-special!
   []
   "TODO: docs"
-  (load-sym! "(hykwd)" (->> hy-specials
-                            (map #%(return #(%1 %1))))))
+  (load-sym! "(hykwd)" (map #%(return #(%1 (hy.eval `(get-macro ~%1)))) hy-specials)))
 
 (defn load-sys!
   []
