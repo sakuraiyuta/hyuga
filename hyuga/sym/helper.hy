@@ -45,7 +45,7 @@
 
 (defn get-full-sym
   [scope ns sym]
-  (+ scope "\\" ns "\\" sym))
+  (+ scope "\\" (if (isinstance ns str) ns (fix-hy-symbol ns)) "\\" sym))
 
 (defn sym-py/val->sym-hy/val
   [sym-py/val]
