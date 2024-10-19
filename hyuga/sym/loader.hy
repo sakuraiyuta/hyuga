@@ -3,7 +3,6 @@
 (import hyrule.collections [assoc])
 (import hyrule.collections [walk])
 
-(import hy.reserved [names :as hy-specials])
 (import hy.models [Expression])
 (import hy.compiler [HyASTCompiler])
 (import hy.reader [HyReader])
@@ -24,6 +23,10 @@
 (import hyuga.sym.filter [filter-add-targets
                           filter-not-reserved])
 (import hyuga.uri.helper [remove-uri-prefix get-venv])
+
+(import builtins)
+
+(setv hy-specials (.keys builtins._hy_macros))
 
 ; {"{doc-uri}" {"compiler" HyASTCompiler
 ;               "reader" HyReader}}
@@ -79,8 +82,7 @@
   [form [doc-uri "file:///dummy"] [ns "hyuga.sym.dummy"]]
   (let [result
         (hy.eval form
-                 :locals hyuga.sym.dummy.__dict__
-                 :compiler (get-hy-builder doc-uri ns "compiler"))]
+                 :locals hyuga.sym.dummy.__dict__)]
     result))
 
 (defn load-hy-src!
@@ -270,7 +272,7 @@
 (defn load-hy-special!
   []
   "TODO: docs"
-  (load-sym! "(hykwd)" (->> (hy-specials)
+  (load-sym! "(hykwd)" (->> hy-specials
                             (map #%(return #(%1 %1))))))
 
 (defn load-sys!
