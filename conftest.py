@@ -5,6 +5,6 @@ import hy
 
 import pytest
 
-def pytest_collect_file(parent, path):
-    if path.ext == ".hy":
-        return pytest.Module.from_parent(parent, path=Path(path))
+def pytest_collect_file(parent, file_path):
+    if file_path.suffix == ".hy":
+        return pytest.Module.from_parent(parent, path=file_path)
