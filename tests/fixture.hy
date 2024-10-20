@@ -1,6 +1,6 @@
 (import pytest)
 
-(import hyuga.inspect [eval-define!])
+(import hyuga.api [parse-src!])
 
 (setv SRC "
       (import toolz.itertoolz *)
@@ -9,4 +9,4 @@
 (defn [pytest.fixture]
   fixture-syms
   []
-  (eval-define! SRC))
+  (parse-src! SRC "." "."))

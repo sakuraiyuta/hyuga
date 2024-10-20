@@ -25,7 +25,7 @@
 (defn get-details
   [full-sym root-uri doc-uri]
   "TODO: doc"
-  (logger.debug f"get-details: full-sym={full-sym} doc-uri={doc-uri}")
+  (logger.debug f"get-details: full-sym={full-sym} root-uri={root-uri} doc-uri={doc-uri}")
   ;; TODO: try to get info directly if sym not found
   (let [[tgt-scope tgt-ns tgt-sym] (get-scope/ns/sym full-sym)
         current-mod (uri->mod root-uri doc-uri)
@@ -59,7 +59,7 @@
     ```
     "
     (logger.debug f"get-candidates: prefix={prefix}")
-    (let [editting-mod (uri->mod root-uri doc-uri)
+    (let [editing-mod (uri->mod root-uri doc-uri)
           splitted (.split prefix ".")
           module-or-class (module-or-class? splitted)
           sym-prefix (if module-or-class
@@ -73,7 +73,7 @@
           #%(let [full-sym (first %1)
                   sym (get-sym full-sym)
                   scope (-> %1 second (get "scope"))]
-              (and (in scope [editting-mod
+              (and (in scope [editing-mod
                               "(builtin)"
                               "(hykwd)"
                               "(sysenv)"
@@ -82,7 +82,7 @@
                    (or (.startswith (get-ns full-sym) module-or-class)
                        (.startswith scope module-or-class))
                    (.startswith sym sym-prefix)))]
-      (logger.debug f"editting-mod={editting-mod}, module-or-class={module-or-class}, sym-prefix={sym-prefix}")
+      (logger.debug f"editing-mod={editing-mod}, module-or-class={module-or-class}, sym-prefix={sym-prefix}")
       (->> ($GLOBAL.get-$SYMS) .items
            (filter filter-fn)
            tuple)))

@@ -4,4 +4,4 @@
 
 (defn docs-str
   [sym scope]
-  f"{(sym-py->hy sym.__name__)} [{scope}]\n\t{sym}\n\n{sym.__doc__}")
+  f"{(sym-py->hy sym.__name__)} [{scope}]\n\t{sym}\n\n{(or sym.__doc__ "No docs.")}")
