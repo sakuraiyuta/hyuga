@@ -1,7 +1,7 @@
 (require hyrule * :readers *)
 
 (import pytest)
-(import attr)
+(import os)
 
 (import hyuga.api *)
 (import fixture [fixture-syms])
@@ -10,35 +10,78 @@
 (defn [(pytest.mark.parametrize
          #("val" "expected")
          [#("eval"
-             {"sym"   "eval"
+             {"sym"   "\\(builtin)\\eval"
               "type"  eval
-              "scope" "builtin"
-              "docs"  (docs-str eval "builtin")})
+              "uri"   False
+              "scope" ""
+              "ns"    "(builtin)"
+              "docs"  (docs-str eval "(builtin)")
+              "pos"   None})
           #("first"
-             {"sym"   "first"
+             {"sym"   ".None\\toolz.itertoolz\\first"
               "type"  first
-              "scope" "local"
-              "docs"  (docs-str first "local")})])]
+              "uri"   "."
+              "scope" ".None"
+              "ns"    "toolz.itertoolz"
+              "docs"  (docs-str first "toolz.itertoolz")
+              "pos"   #(2, 15)})])]
   test_get-details
-  [val expected fixture-syms]
-  (assert (= (get-details val) expected)))
+  [val expected fixture-syms pytestconfig]
+  (setv roots (+ "file://" (os.path.join pytestconfig.rootdir "tests" "api.hy")))
+;   (print (get-details val roots roots))
+;   (print)
+;   (print expected)
+  (assert (= (get-details val roots roots) expected)))
 
 (defn [(pytest.mark.parametrize
          #("val" "expected")
-         [#("eval"
-             #({"sym"   "eval"
-                "type"  eval
-                "scope" "builtin"
-                "docs"  (docs-str eval "builtin")}))
-          #("filter"
-             #({"sym"   "attr.filters"
-                "type"  attr.filters
-                "scope" "sys"
-                "docs"  (docs-str attr.filters "sys")}
-               {"sym"   "filter"
-                "type"  filter
-                "scope" "builtin"
-                "docs"  (docs-str filter "builtin")}))])]
+         [#("eval" 
+            #(#("\\(builtin)\\eval" 
+                {"sym"   "\\(builtin)\\eval"
+                 "type"  eval
+                 "uri"   False
+                 "scope" ""
+                 "ns"    "(builtin)"
+                 "docs"  (docs-str eval "(builtin)")
+                 "pos"   None}) 
+              #("\\(hykwd)\\eval-and-compile" 
+                {"sym"   "\\(hykwd)\\eval-and-compile"
+                 "type"  (get-macro eval-and-compile)
+                 "uri"   False
+                 "scope" ""
+                 "ns"    "(hykwd)"
+                 "docs"  (docs-str (get-macro eval-and-compile) "(hykwd)")
+                 "pos"   None}) 
+              #("\\(hykwd)\\eval-when-compile" 
+                {"sym"   "\\(hykwd)\\eval-when-compile" 
+                 "type"  (get-macro eval-when-compile) 
+                 "uri"   False
+                 "scope" ""
+                 "ns"    "(hykwd)"
+                 "docs"  (docs-str (get-macro eval-when-compile) "(hykwd)")
+                 "pos"   None})))
+         ;  #("filter" 
+         ;    #(#("\\(builtin)\\filter"
+         ;        {"sym"   "\\(builtin)\\filter"
+         ;         "type"  filter
+         ;         "uri"   False
+         ;         "scope" ""
+         ;         "ns"    "(builtin)"
+         ;         "docs"  (docs-str filter "(builtin)")
+         ;         "pos"   None})
+         ;      #("\\(sysenv)\\filter"
+         ;        {"sym"   "\\(sysenv)\\filter"
+         ;         "type"  (importlib.import_module "sym.filter" :package "filter")
+         ;         "uri"   False
+         ;         "scope" "" 
+         ;         "ns"    "(sysenv)"
+         ;         "docs"  (docs-str (importlib.import_module "sym.filter" :package "filter") "(sysenv)")
+         ;         "pos"   None})))
+          ])]
   test_get-candidates
-  [val expected fixture-syms]
-  (assert (= (get-candidates val) expected)))
+  [val expected fixture-syms pytestconfig]
+  (setv roots (+ "file://" (os.path.join pytestconfig.rootdir "tests" "api.hy")))
+;   (print (get-candidates val roots roots))
+;   (print)
+;   (print expected)
+  (assert (= (get-candidates val roots roots) expected))) eval

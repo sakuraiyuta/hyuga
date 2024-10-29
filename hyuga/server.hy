@@ -1,4 +1,5 @@
 (require hyrule * :readers *)
+(require hyrule.argmove [-> ->>])
 (import toolz.itertoolz *)
 (import lsprotocol.types [TEXT_DOCUMENT_COMPLETION
                           TEXT_DOCUMENT_HOVER
@@ -84,9 +85,7 @@
   [params]
   (try
     (logger.info f"did-open: uri={params.text_document.uri}")
-    (parse-src! (-> params.text_document.uri
-                    $SERVER.workspace.get_document
-                    (. source))
+    (parse-src! (. ($SERVER.workspace.get_text_document params.text_document.uri) source)
                 $SERVER.workspace.root_uri
                 params.text_document.uri)
     (except [e Exception]
@@ -101,9 +100,7 @@
   [params]
   (try
     (logger.info f"did-change: uri={params.text_document.uri}")
-    (load-src! (-> params.text_document.uri
-                   $SERVER.workspace.get_document
-                   (. source))
+    (load-src! (. ($SERVER.workspace.get_text_document params.text_document.uri) source)
                $SERVER.workspace.root_uri
                params.text_document.uri
                (uri->mod

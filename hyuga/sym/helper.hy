@@ -1,4 +1,5 @@
 (require hyrule * :readers *)
+(require hyrule.argmove [-> ->>])
 (import hyrule.iterables [drop-last])
 
 (import os.path [dirname])
@@ -44,7 +45,7 @@
 
 (defn get-full-sym
   [scope ns sym]
-  (+ scope "\\" ns "\\" sym))
+  (+ scope "\\" (if (isinstance ns str) ns (fix-hy-symbol ns)) "\\" sym))
 
 (defn sym-py/val->sym-hy/val
   [sym-py/val]

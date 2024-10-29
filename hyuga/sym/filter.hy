@@ -1,9 +1,14 @@
 (require hyrule * :readers *)
+(require hyrule.argmove [-> ->>])
 
 (import toolz.itertoolz *)
 
 (import hyuga.sym.helper *)
-(import hy.reserved [names :as hy-specials])
+
+(import builtins)
+(import keyword)
+
+(setv hy-specials (set (+ (list (.keys builtins._hy_macros)) keyword.kwlist)))
 
 (defn not-exclude-sym?
   [sym-hy/val]
@@ -45,5 +50,5 @@
        (filter #%(and (not (in (first %1)
                                (__builtins__.keys)))
                       (not (in (-> %1 first sym-py->hy)
-                               (tuple (hy-specials))))))))
+                               (tuple hy-specials)))))))
 

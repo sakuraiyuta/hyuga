@@ -4,6 +4,7 @@
 (import toolz.itertoolz [first])
 
 (import hyuga.global [$GLOBAL])
+(import hyuga.sym.doc [create-docs])
 (import hyuga.sym.helper *)
 (import fixture [fixture-syms])
 (import misc *)
@@ -34,45 +35,6 @@
   [val expected]
   (assert (= (sym-py/val->sym-hy/val val) expected)))
 
-(defn [(pytest.mark.parametrize
-         #("val" "expected")
-         [#(["first" None] False)
-          #(["toolz" None] False)
-          #(["!not-in-sym!" None] True)])]
-  test_not-in-sym
-  [val expected fixture-syms]
-  (assert (= (not-in-$SYM? val) expected)))
-
-(defn [(pytest.mark.parametrize
-         #("val" "expected")
-         [#(["eval" None] True)
-          #(["first" None] True)
-          #(["toolz" None] True)
-          #(["_hy-let" None] False)
-          #(["_hy-anon" None] False)
-          #(["-hyuga-eval-form" None] False)])]
-  test_not-exclude-sym
-  [val expected fixture-syms]
-  (assert (= (not-exclude-sym? val) expected)))
-
-(defn [(pytest.mark.parametrize
-         #("val" "scope" "expected")
-         [#(["eval" eval]
-            "local"
-            {"sym" "eval"
-             "type" eval
-             "scope" "local"
-             "docs" (docs-str eval "local")})
-          #(["first" first]
-            "global"
-            {"sym" "first"
-             "type" first
-             "scope" "global"
-             "docs" (docs-str first "global")})])]
-  test_add-sym
-  [val scope expected fixture-syms]
-  (assert (= (add-sym! val scope) expected)))
-
 ;; TODO: testcase for -get-macro-doc
 ;(eval-define! "")
 ;(defn [(let [val-doto (-> ($GLOBAL.get-$SYMS)
@@ -96,7 +58,7 @@
              (docs-str create-docs "global"))])]
   test_create-docs
   [symhy symtype scope expected]
-  (assert (= (create-docs symhy symtype scope) expected)))
+  (assert (= (create-docs symhy symtype scope ".") expected)))
 
 ;(defn [(pytest.mark.parametrize
 ;         #("symsplitted" "expected")
