@@ -20,7 +20,7 @@ Verified-working Hy version: [1.0.0](https://github.com/hylang/hy/tree/stable)
 |0.26      |?            |
 |0.27      |?            |
 |0.28      |?            |
-|0.28      |1.0.0        |
+|1.0.0     |1.0.0        |
 
 We need your help to check the support status for each hy version.
 
