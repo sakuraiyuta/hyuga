@@ -8,6 +8,18 @@
 (import misc *)
 
 (defn [(pytest.mark.parametrize
+        #("src" "root_uri" "doc_uri" "expected")
+        [#("(import toolz.itertoolz *)"
+           "."
+           "."
+           None)])]
+  test_parse-src
+  [src root-uri doc-uri expected]
+  (print f"expected: { expected }" )
+  (print f"got:      { (parse-src! src root-uri doc-uri) }")
+  (assert (= (parse-src! src root-uri doc-uri) expected)))
+
+(defn [(pytest.mark.parametrize
          #("val" "expected")
          [#("eval"
              {"sym"   "\\(builtin)\\eval"
@@ -24,13 +36,12 @@
               "scope" ".None"
               "ns"    "toolz.itertoolz"
               "docs"  (docs-str first "toolz.itertoolz")
-              "pos"   #(2, 15)})])]
+              "pos"   #(1 9)})])]
   test_get-details
   [val expected fixture-syms pytestconfig]
   (setv roots (+ "file://" (os.path.join pytestconfig.rootdir "tests" "api.hy")))
-;   (print (get-details val roots roots))
-;   (print)
-;   (print expected)
+  (print f"expected: { expected }" )
+  (print f"got:      { (get-details val roots roots) }")
   (assert (= (get-details val roots roots) expected)))
 
 (defn [(pytest.mark.parametrize
@@ -59,29 +70,29 @@
                  "scope" ""
                  "ns"    "(hykwd)"
                  "docs"  (docs-str (get-macro eval-when-compile) "(hykwd)")
-                 "pos"   None})))
-         ;  #("filter" 
-         ;    #(#("\\(builtin)\\filter"
-         ;        {"sym"   "\\(builtin)\\filter"
-         ;         "type"  filter
-         ;         "uri"   False
-         ;         "scope" ""
-         ;         "ns"    "(builtin)"
-         ;         "docs"  (docs-str filter "(builtin)")
-         ;         "pos"   None})
-         ;      #("\\(sysenv)\\filter"
-         ;        {"sym"   "\\(sysenv)\\filter"
-         ;         "type"  (importlib.import_module "sym.filter" :package "filter")
-         ;         "uri"   False
-         ;         "scope" "" 
-         ;         "ns"    "(sysenv)"
-         ;         "docs"  (docs-str (importlib.import_module "sym.filter" :package "filter") "(sysenv)")
-         ;         "pos"   None})))
-          ])]
+                 "pos"   None})))])]
   test_get-candidates
-  [val expected fixture-syms pytestconfig]
+  [val expected pytestconfig]
   (setv roots (+ "file://" (os.path.join pytestconfig.rootdir "tests" "api.hy")))
-;   (print (get-candidates val roots roots))
-;   (print)
-;   (print expected)
-  (assert (= (get-candidates val roots roots) expected))) eval
+  (print f"expected: { expected }" )
+  (print f"got:      { (get-candidates val roots roots) }")
+  (assert (= (get-candidates val roots roots) expected)))
+
+(defn [(pytest.mark.parametrize
+        #("tgt_full_sym" "root_uri" "doc_uri" "expected")
+        [#("eval"
+           "."
+           "."
+           #(#("\\(builtin)\\eval" 
+               {"sym"   "\\(builtin)\\eval"
+                "type"  eval
+                "uri"   False
+                "scope" ""
+                "ns"    "(builtin)"
+                "docs"  (docs-str eval "(builtin)")
+                "pos"   None})) )])]
+  test_get-matches
+  [tgt-full-sym root-uri doc-uri expected]
+  (print f"expected: { expected }" )
+  (print f"got:      { (get-matches tgt-full-sym root-uri doc-uri) }")
+  (assert (= (get-matches tgt-full-sym root-uri doc-uri) expected)))
