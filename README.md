@@ -114,6 +114,17 @@ vim.api.nvim_create_autocmd("FileType", {
 
 Install [vim-lsp](https://github.com/prabirshrestha/vim-lsp) and [vim-lsp-settings](https://github.com/mattn/vim-lsp-settings), open a `*.hy` file with `filetype=hy`, then run `:LspInstallServer`
 
+- [coc-marketplace](https://github.com/fannheyward/coc-marketplace)
+- [npm](https://www.npmjs.com/package/hyuga-vscode-client)
+- vim:
+
+```vim
+" command line
+CocInstall hyuga-vscode-client
+" or add the following code to your vimrc
+let g:coc_global_extensions = ['hyuga-vscode-client', 'other coc-plugins']
+```
+
 ---
 
 ### [Visual Studio Code(VSCode)](https://code.visualstudio.com)

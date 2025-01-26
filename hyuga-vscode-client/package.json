@@ -8,9 +8,11 @@
   "displayName": "Hyuga VSCode Client",
   "description": "Hy LSP(hyuga) Client for VSCode",
   "engines": {
+    "coc": "^0.0.82",
     "vscode": "^1.85.0"
   },
   "keywords": [
+    "coc.nvim",
     "hy",
     "hylang",
     "LSP"
@@ -37,9 +39,9 @@
     ]
   },
   "scripts": {
-    "package": "cp ../README.md ./ && cp ../LICENSE ./ && pnpm vsce package --no-dependencies",
-    "pre-release": "pnpm run package && pnpm vsce publish --no-dependencies --pre-release",
-    "publish": "pnpm run package && pnpm vsce publish --no-dependencies",
+    "vscode:package": "cp ../README.md ./ && cp ../LICENSE ./ && pnpm vsce package --no-dependencies",
+    "vscode:pre-release": "pnpm run package && pnpm vsce publish --no-dependencies --pre-release",
+    "vscode:publish": "pnpm run package && pnpm vsce publish --no-dependencies",
     "vscode:prepublish": "npm run esbuild-base -- --minify",
     "esbuild-base": "esbuild ./src/extension.ts --bundle --outfile=out/extension.js --external:vscode --format=cjs --platform=node",
     "compile": "tsc -p ./",
@@ -59,9 +61,8 @@
     "eslint": "^8.28.0",
     "glob": "^8.0.3",
     "mocha": "^10.1.0",
+    "vscode-languageclient": "^9.0.1",
+    "coc.nvim": "^0.0.82",
     "typescript": "^4.9.3"
-  },
-  "dependencies": {
-    "vscode-languageclient": "^9.0.1"
   }
 }
