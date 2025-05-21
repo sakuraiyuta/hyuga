@@ -1,26 +1,29 @@
-[tool.poetry]
+[build-system]
+requires = ["pdm-backend"]
+build-backend = "pdm.backend"
+
+[project]
+authors = [
+    {name = "Yuuta Sakurai", email = "sakurai.yuta@gmail.com"},
+]
+license = {text = "MIT"}
+requires-python = "<3.13,<4.0,>=3.9"
+dependencies = [
+    "hy>=1.1",
+    "hyrule>=1.0",
+    "toolz<1.0.0,>=0.12.0",
+    "pygls<2.0.0,>=1.2.1",
+    "setuptools<76.0.0,>=75.2.0",
+]
 name = "hyuga"
 version = "1.0.0"
 description = "Hyuga - Yet Another Hy Language Server"
-authors = ["Yuuta Sakurai <sakurai.yuta@gmail.com>"]
-license = "MIT"
 readme = "README.md"
-include = []
 
-[tool.poetry.dependencies]
-python = "^3.8,<3.13"
-hy = "^1.0.0"
-hyrule = "^0.7"
-toolz = "^0.12.0"
-pygls = "^1.2.1"
-setuptools = "^75.2.0"
-
-[tool.poetry.group.dev.dependencies]
-pytest = "^7.1.3"
-
-[build-system]
-requires = ["poetry-core"]
-build-backend = "poetry.core.masonry.api"
-
-[tool.poetry.scripts]
+[project.scripts]
 hyuga = "hyuga.__main__:main"
+
+[dependency-groups]
+dev = [
+    "pytest<8.0.0,>=7.1.3",
+]

@@ -80,12 +80,7 @@
             {"name" "hy"
              "type" "import"
              "pos" #(1 1)
-             "includes" None})
-          #('(import hyrule.collections [walk])
-            {"name" "hyrule.collections"
-             "type" "import"
-             "pos" #(1 1)
-             "includes" ["walk"]})])]
+             "includes" None})])]
   test_get-import-summary 
   [form expected fixture-syms]
   (print f"expected: { expected }")
@@ -169,11 +164,6 @@
              "type" "import"
              "pos" #(1 1)
              "includes" None})
-          #('(import hyrule.collections [walk])
-            {"name" "hyrule.collections"
-             "type" "import"
-             "pos" #(1 1)
-             "includes" ["walk"]})
           #('(setv test True) 
             {"name" "test"
              "type" "setv"

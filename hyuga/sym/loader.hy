@@ -1,7 +1,7 @@
 (require hyrule * :readers *)
 (require hyrule.argmove [-> ->>])
 (import hyrule.collections [assoc])
-(import hyrule.collections [walk])
+(import hyrule.macrotools [map-model])
 
 (import hy.models [Expression])
 (import hy.compiler [HyASTCompiler])
@@ -204,19 +204,17 @@
 (defn prewalk-form!
   [root-uri doc-uri ns recur? need-import? form]
   "TODO: doc"
-  (let [f #%(when (load-target? form)
-              ;; TODO: fix for nested defn/defclass
-              (analyze-form! form
-                             root-uri
-                             doc-uri
-                             ns
-                             recur?
-                             need-import?)
-              %1)]
-    (walk (partial prewalk-form! root-uri doc-uri ns
-                   recur? need-import?)
-          #%(return %1)
-          (f form))))
+  (map-model
+    form
+    #%(do
+        (when (load-target? %1)
+          (analyze-form! %1
+                         root-uri
+                         doc-uri
+                         ns
+                         recur?
+                         need-import?))
+        None)))
 
 (defn walk-form!
   [forms root-uri doc-uri ns recur? need-import?]

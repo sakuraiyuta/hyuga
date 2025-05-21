@@ -1,6 +1,6 @@
 (require hyrule * :readers *)
 (require hyrule.argmove [-> ->>])
-(import hyrule.collections [walk])
+(import hyrule.macrotools [map-model])
 
 (import hy.models [Expression List String])
 (import toolz.itertoolz *)
@@ -34,18 +34,18 @@
         (.update ret {"docs" (-> (nth 3 form) str)}))))
   ret)
 
-(defn get-defclass-methods
-  [forms ret]
-  "TODO: doc"
-  ;; TODO: split static/object method and keep info
-  (walk #%(when (isinstance %1 Expression)
-            (let [summary (get-defn-summary %1)
-                  methods (get ret "methods")]
-              (.append methods summary)
-              (.update ret {"methods" methods}))
-            %1)
-        #%(return %1)
-        forms))
+(defn get-defclass-methods [forms ret]
+  "Collect summaries of every (defn …) that appears inside `forms`.
+   Results are accumulated into `ret[\"methods\"]` and `ret` is returned."
+  (map-model
+    (list forms)
+    #%(do
+        (when (and (isinstance %1 Expression)
+                   (= (first %1) 'defn))
+          (.append (get ret "methods")
+                   (get-defn-summary %1)))
+        None))
+  forms)
 
 (defn get-defclass-summary
   [form]
@@ -77,25 +77,30 @@
    "pos" #((getattr (second form) "start_line")
            (getattr (second form) "start_column"))})
 
-(defn get-import-summary
-  [form]
+(defn get-import-summary [form]
   (setv ret {"name" (-> form second fix-hy-symbol)
              "type" "import"
-             "pos" #((getattr (second form) "start_line")
-                     (getattr (second form) "start_column"))
+             "pos"  #((getattr (second form) "start_line")
+                      (getattr (second form) "start_column"))
              "includes" None})
+
   (let [options (list (drop 2 form))]
-    ;; TODO: multiple import support(e.g. (import a.b x.y))
-    (when (-> options count (> 0))
+    (when (> (count options) 0)
       (let [option (first options)]
         (if (isinstance option List)
-          (.update ret {"includes" (->> option
-                                        (walk #%(-> %1 fix-hy-symbol)
-                                          #%(return %1))
-                                        hy.eval
-                                        (filter #%(not (= ":as" %1)))
-                                        (map sym-hy->py)
-                                        list)})
+          (do
+            (setv transformed
+              (map-model
+                option
+                #%(if (isinstance %1 HySymbol)
+                    (fix-hy-symbol %1)
+                    %1)))
+            (setv includes (->> transformed
+                                 hy.eval
+                                 (filter #%(not (= ":as" %1)))
+                                 (map sym-hy->py)
+                                 list))
+            (.update ret {"includes" includes}))
           (.update ret {"includes" "*"})))))
   ret)
 
