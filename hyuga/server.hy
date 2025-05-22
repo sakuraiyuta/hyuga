@@ -17,7 +17,6 @@
   hyuga.log [logger]
   hyuga.lspspec *
   hyuga.sym.loader [load-src!]
-  hyuga.pyproject [read-pyproject]
   hyuga.version *)
 
 (setv $SERVER (LanguageServer :name __package__ :version (get-version)))
