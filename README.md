@@ -13,14 +13,15 @@ Please be aware that specifications may change without prior notice.
 
 Verified-working Hy version: [1.0.0](https://github.com/hylang/hy/tree/stable)
 
-|Hy version|Hyuga Support|
-|----------|-------------|
-|0.24      |0.2.1        |
-|0.25      |?            |
-|0.26      |?            |
-|0.27      |?            |
-|0.28      |?            |
-|1.0.0     |1.0.0        |
+| Hy version | Hyuga Support Version |
+|------------|-----------------------|
+| 0.24       | 0.2.1                 |
+| 0.25       | ?                     |
+| 0.26       | ?                     |
+| 0.27       | ?                     |
+| 0.28       | ?                     |
+| 1.0.0      | 1.0.0                 |
+| 1.1.0      | 1.1.0                 |
 
 We need your help to check the support status for each hy version.
 
@@ -137,14 +138,14 @@ let g:coc_global_extensions = ['hyuga-vscode-client', 'other coc-plugins']
 
 ### Setup
 
-- Install [poetry](https://github.com/python-poetry/poetry).
+- Install [uv](https://docs.astral.sh/uv/).
 - Clone this project: `git clone https://github.com/sakuraiyuta/hyuga.git`
-- In project directory, execute `poetry install`.
+- Execute `poetry install` in project directory.
 
 ### Test
 
 ```bash
-poetry run pytest tests
+uv run pytest
 ```
 
 ## License

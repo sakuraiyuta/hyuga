@@ -1,22 +1,24 @@
-(require hyrule * :readers *)
-(require hyrule.argmove [-> ->>])
-(import toolz.itertoolz *)
+(require hyrule * :readers *
+         hyrule.argmove [-> ->>])
+
 (import lsprotocol.types [TEXT_DOCUMENT_COMPLETION
                           TEXT_DOCUMENT_HOVER
                           TEXT_DOCUMENT_DEFINITION
                           TEXT_DOCUMENT_DID_CHANGE
                           TEXT_DOCUMENT_DID_CLOSE
                           TEXT_DOCUMENT_DID_OPEN
-                          CompletionOptions])
-(import pygls.server [LanguageServer])
+                          CompletionOptions]
+        toolz.itertoolz *
+        pygls.server [LanguageServer])
 
-(import hyuga.api *)
-(import hyuga.version [get-version])
-(import hyuga.sym.loader [load-src!])
-(import hyuga.cursor *)
-(import hyuga.lspspec *)
-(import hyuga.log [logger])
-(import hyuga.version [get-version])
+(import
+  hyuga.api *
+  hyuga.cursor *
+  hyuga.log [logger]
+  hyuga.lspspec *
+  hyuga.sym.loader [load-src!]
+  hyuga.pyproject [read-pyproject]
+  hyuga.version *)
 
 (setv $SERVER (LanguageServer :name __package__ :version (get-version)))
 
@@ -113,5 +115,9 @@
 
 (defn start
   []
-  (logger.info f"----- hyuga {(get-version)} start -----")
+  (logger.info f"----- hyuga start -----")
+  (logger.info f"\tpython={(get-package-version "python")}")
+  (logger.info f"\thy={(get-package-version "hy")}")
+  (logger.info f"\thyrule={(get-package-version "hyrule")}")
+  (logger.info f"\thyuga={(get-package-version "hyuga")}")
   ($SERVER.start_io))
