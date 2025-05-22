@@ -2,7 +2,7 @@
 (require hyrule.argmove [-> ->>])
 (import hyrule.macrotools [map-model])
 
-(import hy.models [Expression List String])
+(import hy.models [Expression List String Symbol])
 (import toolz.itertoolz *)
 
 (import hyuga.log *)
@@ -92,7 +92,7 @@
             (setv transformed
               (map-model
                 option
-                #%(if (isinstance %1 HySymbol)
+                #%(if (isinstance %1 Symbol)
                     (fix-hy-symbol %1)
                     %1)))
             (setv includes (->> transformed
