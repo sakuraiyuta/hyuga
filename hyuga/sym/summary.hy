@@ -77,32 +77,21 @@
    "pos" #((getattr (second form) "start_line")
            (getattr (second form) "start_column"))})
 
-(defn get-import-summary [form]
-  (setv ret {"name" (-> form second fix-hy-symbol)
-             "type" "import"
-             "pos"  #((getattr (second form) "start_line")
-                      (getattr (second form) "start_column"))
-             "includes" None})
-
-  (let [options (list (drop 2 form))]
-    (when (> (count options) 0)
-      (let [option (first options)]
-        (if (isinstance option List)
-          (do
-            (setv transformed
-              (map-model
-                option
-                #%(if (isinstance %1 Symbol)
-                    (fix-hy-symbol %1)
-                    %1)))
-            (setv includes (->> transformed
-                                 hy.eval
-                                 (filter #%(not (= ":as" %1)))
-                                 (map sym-hy->py)
-                                 list))
-            (.update ret {"includes" includes}))
-          (.update ret {"includes" "*"})))))
-  ret)
+(defn get-import-summary [form #* prev]
+  (let [[expression-pkg #* tail] form]
+    (cond
+      (= (str expression-pkg) "import") (get-import-summary tail)
+      True 
+      (let [[split-char #* pkg-syms] expression-pkg
+             pkg-name (.join split-char pkg-syms)
+             ret {"name" pkg-name
+                  "type" "import"
+                  "pos"  #((getattr (second form) "start_line")
+                           (getattr (second form) "start_column"))
+                  "includes" None}]
+        (when (and (first tail) (isinstance (first tail) List))
+          (.update ret {"includes" (first tail)}))
+        ret))))
 
 (defn get-require-summary
   [form]
