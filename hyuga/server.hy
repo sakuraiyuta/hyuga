@@ -1,5 +1,5 @@
 (require hyrule * :readers *)
-(require hyrule.argmove [-> ->>])
+(require hyrule.argmove [-> ->> as->])
 (import toolz.itertoolz *)
 (import lsprotocol.types [TEXT_DOCUMENT_COMPLETION
                           TEXT_DOCUMENT_HOVER
@@ -7,8 +7,13 @@
                           TEXT_DOCUMENT_DID_CHANGE
                           TEXT_DOCUMENT_DID_CLOSE
                           TEXT_DOCUMENT_DID_OPEN
+                          TEXT_DOCUMENT_FORMATTING
+                          Range
+                          Position
+                          TextEdit
                           CompletionOptions])
 (import pygls.server [LanguageServer])
+(import subprocess)
 
 (import hyuga.api *)
 (import hyuga.version [get-version])
@@ -110,6 +115,25 @@
     (except [e Exception]
       (log-error "did-open" e)
       (raise e))))
+
+(defn [($SERVER.feature TEXT_DOCUMENT_FORMATTING)] format-document
+  [params]
+  "`textDocument/formatting` handler. Uses a hy-compatible formatter (here cljfmt is used because beautifhy is too slow)."
+  (try 
+    (setx document (.get-text-document $SERVER.workspace params.text_document.uri))
+    (setx formatted-document 
+      (as-> (.get-text-document $SERVER.workspace params.text_document.uri) it
+            (. it source)
+            (bytes it :encoding "utf-8")
+            (.run subprocess ["cljfmt" "fix" "-"] :input it :capture-output True :check True)
+            (. it stdout)
+            (.decode it)
+            (.lstrip it)))
+    (except [e Exception]
+      (log-error "format-document" e)
+      (raise e)))
+  (setx doc-range (Range :start (Position :line 0 :character 0) :end (Position :line (len (. document lines)) :character 0)))
+  [(TextEdit doc-range formatted-document)])
 
 (defn start
   []

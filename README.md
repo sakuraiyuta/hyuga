@@ -47,7 +47,6 @@ Please report the results [in issues](https://github.com/sakuraiyuta/hyuga/issue
 ![Hyuga sample movie: jump-to-definition on neovim](https://raw.githubusercontent.com/sakuraiyuta/hyuga/images/hyuga-image-jump-def.gif)
 ![Hyuga sample movie: jump-to-definition on vscode](https://raw.githubusercontent.com/sakuraiyuta/hyuga/images/hyuga-image-jump-def-vscode.gif)
 
-
 ## Install
 
 ### Regular Global Install
@@ -57,10 +56,12 @@ pip3 install hyuga
 ```
 
 On Arch based systems, or other systems that use an externally managed Python environment where the above is not possible:
+
 ```bash
 pipx install hyuga
 ```
-Also, ensure you installed `hy` the same way via `pipx`, not `pacman`/`yay`, as the package has not yet been updated to `1.0.0`, and is currently stuck at `0.29.0-1` for the moment. This likely won't apply in the future as it will inevitably be updated, but `pipx` is generally the safer route here as it pulls it straight from pypi, and doesn't depend on a maintainer to keep it up to date. 
+
+Also, ensure you installed `hy` the same way via `pipx`, not `pacman`/`yay`, as the package has not yet been updated to `1.0.0`, and is currently stuck at `0.29.0-1` for the moment. This likely won't apply in the future as it will inevitably be updated, but `pipx` is generally the safer route here as it pulls it straight from pypi, and doesn't depend on a maintainer to keep it up to date.
 
 ## Setup
 
@@ -91,6 +92,7 @@ end
 ```
 
 And finally, don't forget to run setup! As a reference, here's how I have it set up. I prefer to defer setup (you may need to run `:LspStart` in case it doesn't auto-attach on the first `hy` file that gets opened, but only the first)
+
 ```lua
 vim.api.nvim_create_autocmd("FileType", {
   once = true,
