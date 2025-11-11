@@ -133,6 +133,36 @@ let g:coc_global_extensions = ['hyuga-vscode-client', 'other coc-plugins']
 - In VSCode, open `Extensions` view, search for `hyuga`, and install `Hyuga VSCode Client`.
   - or: visit [Hyuga VSCode Client - Visual Studio Marketplace](https://marketplace.visualstudio.com/items?itemName=sakuraiyuta.hyuga-vscode-client) and install.
 
+### [Helix](https://helix-editor.com)
+
+- Install `hyuga` to your Python environment (Refer to the `Plain install` section for details).
+- Edit your `~/.config/helix/languages.toml` or `.helix/languages.toml` inside your project directory, and add the following snippet:
+
+```toml
+[[language]]
+name = "hy"
+scope = "source.hy"
+injection-regex = "hy"
+file-types = ["hy"]
+language-servers = [ "hyuga" ]
+
+[language-server.hyuga]
+command = "hyuga"
+```
+- Check if it is being recognized by running `hx --health hy`. It should show something like this:
+
+```bash
+❯ hx --health hy
+Configured language servers:
+  ✓ hyuga: /home/user/my-hy-project/.venv/bin/hyuga
+Configured debug adapter: None
+Configured formatter: None
+Tree-sitter parser: ✓
+Highlight queries: ✘
+Textobject queries: ✘
+Indent queries: ✘
+```
+
 ## Development
 
 ### Setup
