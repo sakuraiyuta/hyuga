@@ -8,6 +8,11 @@ import type {
     ExtensionContext as ExtensionContext_coc,
     LanguageClient as LanguageClient_coc,
 } from 'coc.nvim';
+import { existsSync, statSync } from 'fs';
+import { delimiter, dirname, resolve} from 'path';
+import { OutputChannel } from 'vscode';
+import { PythonExtension } from '@vscode/python-extension';
+
 type ExtensionContext = ExtensionContext_vscode | ExtensionContext_coc;
 type LanguageClient = LanguageClient_vscode | LanguageClient_coc;
 let vscode, vlc;
@@ -21,16 +26,63 @@ try {
 const LanguageClient = vlc.LanguageClient;
 
 let client: LanguageClient;
+
+let channel: OutputChannel | null = null;
+
+async function searchHyuga() {
+  const pythonApi: PythonExtension = await PythonExtension.api();
+  const environments = pythonApi.environments;
+  await environments.refreshEnvironments();
+  channel?.appendLine(`environments.known: ${JSON.stringify(environments.known)}`);
+  const venvs = environments.known.filter(env => env.environment?.type == 'VirtualEnvironment'
+  	&& (env.environment.folderUri && env.environment.folderUri.path)
+  	&& (env.tools.some(v => v == 'Venv'))
+  );
+  for (const venv of venvs) {
+    channel?.appendLine(`venv: ${JSON.stringify(venv)}`);
+  	const fpath = venv.environment?.folderUri.fsPath;
+    if (!fpath) {
+      continue;
+    }
+  	const v_path = statSync(fpath).isFile() ? dirname(fpath) : fpath;
+  	const h_path = resolve(v_path, 'hyuga');
+  	const a_path = resolve(v_path, 'activate');
+  	channel?.appendLine(`folderUri.fsPath: ${fpath}`);
+  	channel?.appendLine(`v_path: ${v_path}`);
+  	channel?.appendLine(`hyuga: ${JSON.stringify(h_path)}`);
+  	channel?.appendLine(`activate: ${JSON.stringify(a_path)}`);
+ 
+  	if (!existsSync(a_path) || !statSync(a_path).isFile()) {
+      channel?.appendLine(`activate doesn't exist: ${JSON.stringify(v_path)}`);
+      continue;
+  	}
+  	if (existsSync(h_path) && statSync(h_path).isFile()) {
+      return h_path;
+  	}
+  }
+
+  const p = process.env['PATH']?.split(delimiter).find((x) => existsSync(resolve(x, 'hyuga')));
+  if (p) {
+    return resolve(p, 'hyuga');
+  } else {
+    vscode.window.showWarningMessage(`hyuga doesn't found`);
+    return 'hyuga';
+  }
+}
+
 // This method is called when your extension is activated
 // Your extension is activated the very first time the command is executed
-export function activate(context: ExtensionContext) {
+export async function activate(context: ExtensionContext) {
   // Use the console to output diagnostic information (console.log) and errors (console.error)
   // This line of code will only be executed once when your extension is activated
-  console.info(`hyuga-vscode-client activation...`);
+ 	channel = vscode.window.createOutputChannel('Hyuga Client');
+	channel?.appendLine('hyuga-vscode-client activation...');
 
   try {
+    const hyugaCmd = await searchHyuga();
+    channel?.appendLine(`hyugaCmd: ${hyugaCmd}`);
     const serverOptions = {
-      command: "hyuga",
+      command: hyugaCmd,
     };
     const clientOptions = {
       documentSelector: [
@@ -48,8 +100,6 @@ export function activate(context: ExtensionContext) {
 }
 
 // This method is called when your extension is deactivated
-function deactivate() {
+export function deactivate() {
   if (client) {return client.stop();}
 }
-
-module.exports = { activate, deactivate };
