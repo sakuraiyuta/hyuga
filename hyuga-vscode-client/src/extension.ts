@@ -9,6 +9,7 @@ import type {
     LanguageClient as LanguageClient_coc,
 } from 'coc.nvim';
 import { existsSync, statSync } from 'fs';
+import { platform } from 'os';
 import { delimiter, dirname, resolve} from 'path';
 import { OutputChannel } from 'vscode';
 import { PythonExtension } from '@vscode/python-extension';
@@ -29,6 +30,9 @@ let client: LanguageClient;
 
 let channel: OutputChannel | null = null;
 
+const windows: boolean = platform() == 'win32';
+const hyuga_exe: string = windows ? 'hyuga.exe' : 'hyuga';
+
 async function searchHyuga() {
   const pythonApi: PythonExtension = await PythonExtension.api();
   const environments = pythonApi.environments;
@@ -45,7 +49,7 @@ async function searchHyuga() {
       continue;
     }
   	const v_path = statSync(fpath).isFile() ? dirname(fpath) : fpath;
-  	const h_path = resolve(v_path, 'hyuga');
+  	const h_path = resolve(v_path, hyuga_exe);
   	const a_path = resolve(v_path, 'activate');
   	channel?.appendLine(`folderUri.fsPath: ${fpath}`);
   	channel?.appendLine(`v_path: ${v_path}`);
@@ -61,12 +65,12 @@ async function searchHyuga() {
   	}
   }
 
-  const p = process.env['PATH']?.split(delimiter).find((x) => existsSync(resolve(x, 'hyuga')));
+  const p = process.env['PATH']?.split(delimiter).find((x) => existsSync(resolve(x, hyuga_exe)));
   if (p) {
-    return resolve(p, 'hyuga');
+    return resolve(p, hyuga_exe);
   } else {
-    vscode.window.showWarningMessage(`hyuga doesn't found`);
-    return 'hyuga';
+    vscode.window.showWarningMessage(`No ${hyuga_exe} found`);
+    return hyuga_exe;
   }
 }
 
