@@ -1,5 +1,5 @@
-(import pkg-resources)
+(import importlib.metadata [version])
 
 (defn get-version
   []
-  (. (pkg-resources.get-distribution "hyuga") version))
+  (version "hyuga"))

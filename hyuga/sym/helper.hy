@@ -13,7 +13,7 @@
   [root-uri doc-uri]
   (let [submod (getmodulename doc-uri)]
     (-> doc-uri
-        (.replace root-uri "")
+        (.replace (or root-uri (dirname doc-uri)) "")
         (.lstrip "/")
         dirname
         (.replace "/" ".")

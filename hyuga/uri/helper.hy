@@ -1,6 +1,6 @@
 (require hyrule * :readers *)
 (require hyrule.argmove [-> ->>])
-(import os [listdir])
+(import os [listdir getcwd])
 (import re [sub])
 (import subprocess)
 (import shutil [which])
@@ -21,7 +21,9 @@
 
 (defn get-venv
   [root-uri]
-  (let [root-path (remove-uri-prefix root-uri)
+  (let [root-path (if (is-not root-uri None)
+                      (remove-uri-prefix root-uri)
+                      (getcwd))
         base-venv-path (if (which "poetry")
                          f"{(get-poetry-venv)}/lib"
                          f"{root-path}/.venv/lib")

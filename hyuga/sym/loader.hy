@@ -1,18 +1,17 @@
 (require hyrule * :readers *)
 (require hyrule.argmove [-> ->>])
 (import hyrule.collections [assoc])
-(import hyrule.collections [walk])
 
 (import hy.models [Expression])
 (import hy.compiler [HyASTCompiler])
 (import hy.reader [HyReader])
 
-(import os [listdir])
+(import os [listdir getcwd])
 (import os.path [isdir dirname])
 (import sys [modules])
 (import re)
 (import functools [partial])
-(import pkgutil [iter_modules get_loader])
+(import importlib)
 (import types [ModuleType])
 
 (import hyuga.log [logger])
@@ -25,6 +24,8 @@
 (import hyuga.uri.helper [remove-uri-prefix get-venv])
 
 (import builtins)
+
+(import .util [walk])
 
 (setv hy-specials (.keys builtins._hy_macros))
 
@@ -153,7 +154,7 @@
   (let [fname (hy-src? summary doc-uri)]
     (if fname
       (load-hy-src! form fname root-uri)
-  (load-imported-pypkg! summary ns doc-uri recur?))))
+     (load-imported-pypkg! summary ns doc-uri recur?))))
 
 (defn load-class-methods!
   [ns name doc-uri summary recur?]
@@ -242,7 +243,9 @@
   (try
     (logger.debug f"load-src!: $SYMS.count={(->> ($GLOBAL.get-$SYMS) count)}, root-uri={root-uri}, doc-uri={doc-uri}, ns={ns}, recur?={recur?}")
     (let [ns (or ns (uri->mod root-uri doc-uri))
-          root-path (remove-uri-prefix root-uri)]
+          root-path (if (is-not root-uri None)
+                      (remove-uri-prefix root-uri)
+                      (getcwd))]
       (eval-in! `(import sys) doc-uri)
       ;; add import path root-uri
       (add-import-path! doc-uri root-path root-path)
@@ -308,10 +311,8 @@
                    (filter filter-fn it))
             items (->> syms
                        (map #%(return
-                                #(%1 (-> `(-> ~%1
-                                              pkgutil.get-loader
-                                              .load-module)
-                                         (eval-in! doc-uri)))))
+                               #(%1 (-> `(-> ~%1 importlib.import_module)
+                                        (eval-in! doc-uri)))))
                        tuple)]
         (load-sym! "(venv)" items)))))
 
@@ -319,7 +320,7 @@
   [summary ns doc-uri recur?]
   "TODO: doc"
   (let+ [{name "name" pos "pos"} summary
-         items (-> f"({name}.__macros__.items)" hy.read (eval-in! doc-uri ns))
+         items (-> f"({name}._hy_macros.items)" hy.read (eval-in! doc-uri ns))
          filtered (->> items filter-not-reserved tuple)]
     (logger.debug f"load-required-macros! summary={summary}, ns={ns}, doc-uri={doc-uri}, recur?={recur?}")
     (load-sym! name filtered pos doc-uri recur?)))
@@ -328,7 +329,7 @@
   [name ns pos uri recur?]
   "TODO: doc"
   (logger.debug f"load-macro! name={name}, ns={ns}, uri={uri}, recur?={recur?}")
-  (let [items (-> f"({ns}.__macros__.items)"
+  (let [items (-> f"({ns}._hy_macros.items)"
                   (hy.read)
                   (eval-in! uri ns))
         matched (->> items

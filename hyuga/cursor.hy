@@ -6,7 +6,7 @@
 (defn cursor-line
   [$SERVER uri ln]
   "TODO: doc"
-  (let [doc ($SERVER.workspace.get_document uri)
+  (let [doc ($SERVER.workspace.get_text_document uri)
         content doc.source
         lines (content.split "\n")]
     (get lines ln)))

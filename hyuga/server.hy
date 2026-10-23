@@ -8,7 +8,7 @@
                           TEXT_DOCUMENT_DID_CLOSE
                           TEXT_DOCUMENT_DID_OPEN
                           CompletionOptions])
-(import pygls.server [LanguageServer])
+(import pygls.lsp.server [LanguageServer])
 
 (import hyuga.api *)
 (import hyuga.version [get-version])

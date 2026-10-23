@@ -1,12 +1,13 @@
 (require hyrule * :readers *)
 (require hyrule.argmove [-> ->>])
-(import hyrule.collections [walk])
 
 (import hy.models [Expression List String])
 (import toolz.itertoolz *)
 
 (import hyuga.log *)
 (import hyuga.sym.helper *)
+
+(import .util [walk])
 
 (defn get-defn-summary
   [form]
